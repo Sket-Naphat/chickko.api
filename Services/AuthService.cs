@@ -4,7 +4,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Identity; // สำหรับ PasswordHasher
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore; // สำหรับ PasswordHasher
 
 namespace chickko.api.Services
 {
@@ -65,35 +66,31 @@ namespace chickko.api.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-        public User? Register(RegisterRequest request)
+       public async Task<User> Register(RegisterRequest request)
         {
-            // ตรวจสอบว่าผู้ใช้มีอยู่แล้วหรือไม่
-            if (_context.Users.Any(u => u.Username == request.Username))
+            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
-                return null; // ถ้ามีผู้ใช้แล้ว คืนค่า null
+                throw new Exception("Username already exists");
             }
 
-            // สร้างผู้ใช้ใหม่
             var user = new User
             {
                 Username = request.Username,
-                Password = request.Password, // ควรเข้ารหัสรหัสผ่านก่อนเก็บในฐานข้อมูล
+                Password = request.Password,
                 Name = request.Name,
-                Role = "user", // กำหนดบทบาทเริ่มต้นเป็น "user"
-             // วันที่เริ่มทำงานเป็นวันที่ปัจจุบัน
+                Role = "user",
                 DateOfBirth = DateTime.SpecifyKind(request.DateOfBirth, DateTimeKind.Utc),
                 StartWorkDate = DateTime.SpecifyKind(request.StartWorkDate, DateTimeKind.Utc),
-                CreatedAt = DateTime.UtcNow, // วันที่สร้างผู้ใช้
-                UpdatedAt = DateTime.UtcNow, // วันที่แก้ไขล่าสุด
-                IsActive = true // สถานะการใช้งานของผู้ใช้
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsActive = true
             };
 
-            // เข้ารหัสรหัสผ่านก่อนเก็บในฐานข้อมูล
             user.Password = _passwordHasher.HashPassword(user, request.Password);
             _context.Users.Add(user);
-            _context.SaveChanges(); // บันทึกการเปลี่ยนแปลงในฐานข้อมูล
+            await _context.SaveChangesAsync();
 
-            return user; // คืนค่าผู้ใช้ที่ลงทะเบียนสำเร็จ
+            return user;
         }
     }
 }

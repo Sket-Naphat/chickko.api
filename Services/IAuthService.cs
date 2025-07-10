@@ -6,6 +6,6 @@ namespace chickko.api.Services
     {
         User? Login(string username, string password);
         string GenerateJwtToken(User user);
-        User? Register(RegisterRequest request);
+        Task<User> Register(RegisterRequest request);
     }
 }
