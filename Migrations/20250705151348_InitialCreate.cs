@@ -20,7 +20,10 @@ namespace chickko.api.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Price = table.Column<decimal>(type: "numeric", nullable: false),
                     ImageUrl = table.Column<string>(type: "text", nullable: true),
-                    Description = table.Column<string>(type: "text", nullable: true)
+                    Cost = table.Column<decimal>(type: "numeric", nullable: false),
+                    Active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
+                    IsTopping = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    CategoryId = table.Column<int>(type: "integer", nullable: true),   
                 },
                 constraints: table =>
                 {

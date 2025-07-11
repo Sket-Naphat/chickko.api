@@ -37,7 +37,11 @@ namespace chickko.api.Services
             existing.Name = menu.Name;
             existing.Price = menu.Price;
             existing.ImageUrl = menu.ImageUrl;
-            existing.Description = menu.Description;
+            existing.Cost = menu.Cost;
+            existing.Active = menu.Active; 
+            existing.IsTopping = menu.IsTopping;
+            existing.CategoryId = menu.CategoryId;
+            
 
             _context.SaveChanges();
             return existing;

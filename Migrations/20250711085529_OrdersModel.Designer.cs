@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250711085529_OrdersModel")]
+    partial class OrdersModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

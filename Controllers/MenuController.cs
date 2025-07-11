@@ -32,7 +32,8 @@ namespace chickko.api.Controllers
             return Ok(menu);
         }
 
-        [HttpPost]
+        [HttpPost("createmenu")]
+        [Authorize] // เพิ่มการตรวจสอบสิทธิ์
         public IActionResult CreateMenu(Menu menu)
         {
             var created = _service.CreateMenu(menu);
