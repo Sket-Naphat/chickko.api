@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using chickko.api.Services;
+using chickko.api.Models;
 
 namespace chickko.api.Controllers
 {
@@ -35,14 +36,14 @@ namespace chickko.api.Controllers
         // // Example: POST /api/orders
         // [HttpPost]
         // public IActionResult CreateOrder([FromBody] OrderDto orderDto)
-        // {
+        // {t5
         //     var createdOrder = _ordersService.CreateOrder(orderDto);
         //     return CreatedAtAction(nameof(GetOrderById), new { id = createdOrder.Id }, createdOrder);
         // }
-        [HttpPost("copy-from-firestore")]
-        public async Task<IActionResult> CopyOrderFromFirestore()
+        [HttpPost("CopyOrderFromFirestore")]
+        public async Task<IActionResult> CopyOrderFromFirestore(CopyOrderFromFirestore _CopyOrderFromFirestore)
         {
-            var result = await _ordersService.CopyOrderFromFirestore();
+            var result = await _ordersService.CopyOrderFromFirestore(_CopyOrderFromFirestore.OrderDateFrom.ToString() ?? "", _CopyOrderFromFirestore.OrderDateTo.ToString()?? "");
             return Ok(result);
         }
     }

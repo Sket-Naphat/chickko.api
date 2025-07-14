@@ -4,7 +4,7 @@ namespace chickko.api.Services
 {
     public interface IOrdersService
     {
-        Task<string> CopyOrderFromFirestore();    
+        Task<string> CopyOrderFromFirestore(string datefrom = "", string dateto = "");
 
     }
 }

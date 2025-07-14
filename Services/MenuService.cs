@@ -47,10 +47,10 @@ namespace chickko.api.Services
             existing.IsTopping = menu.IsTopping;
             existing.CategoryId = menu.CategoryId;
 
-            
-            if (!string.IsNullOrEmpty(menu.IdInFirestore))// ตรวจสอบว่า IdInFirestore ไม่ว่างเปล่า
+            // ตรวจสอบว่า IdInFirestore ไม่ว่างเปล่า
+            if (!string.IsNullOrEmpty(menu.MenuIdInFirestore))// ตรวจสอบว่า IdInFirestore ไม่ว่างเปล่า
             {
-                existing.IdInFirestore = menu.IdInFirestore;// อัปเดต IdInFirestore ด้วยค่าใหม่
+                existing.MenuIdInFirestore = menu.MenuIdInFirestore;// อัปเดต IdInFirestore ด้วยค่าใหม่
             }
 
             _context.Menus.Update(existing);
@@ -91,7 +91,7 @@ namespace chickko.api.Services
 
                     var menu = new Menu
                     {
-                        IdInFirestore = doc.Id, // ใช้ ID ของ Firestore
+                        MenuIdInFirestore = doc.Id, // ใช้ ID ของ Firestore
                         Name = data["name"]?.ToString() ?? "",
                         Price = Convert.ToDecimal(data["price"]),
                         Cost = Convert.ToDecimal(data["cost"]),
@@ -105,7 +105,7 @@ namespace chickko.api.Services
                     _context.Menus.Add(menu);
                     await _context.SaveChangesAsync();
                     copied++;
-                    Console.WriteLine($"คัดลอกเมนู: {menu.Name} (ID: {menu.IdInFirestore})");
+                    Console.WriteLine($"คัดลอกเมนู: {menu.Name} (ID: {menu.MenuIdInFirestore})");
                 }
                 
                 return $"คัดลอก เมนู จาก Firestore มา {copied} รายการเรียบร้อยแล้ว";

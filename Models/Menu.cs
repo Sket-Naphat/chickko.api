@@ -28,6 +28,6 @@ namespace chickko.api.Models
         public int? CategoryId { get; set; }
 
         public Category? Category { get; set; }
-        public string IdInFirestore { get; set; } = string.Empty;
+        public string MenuIdInFirestore { get; set; } = string.Empty;
     }
 }
