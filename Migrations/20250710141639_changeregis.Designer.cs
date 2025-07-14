@@ -13,18 +13,22 @@ namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
     [Migration("20250710141639_changeregis")]
-    partial class changeregis
+    partial class ChangeRegis : Migration
     {
+
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
+            // กำหนด Annotation สำหรับ ModelBuilder
             modelBuilder
                 .HasAnnotation("ProductVersion", "9.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            // ใช้งาน IdentityByDefaultColumns สำหรับ PostgreSQL
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            // กำหนด Entity สำหรับตาราง Menu
             modelBuilder.Entity("chickko.api.Models.Menu", b =>
                 {
                     b.Property<int>("Id")
@@ -51,6 +55,7 @@ namespace chickko.api.Migrations
                     b.ToTable("Menus");
                 });
 
+            // กำหนด Entity สำหรับตาราง User
             modelBuilder.Entity("chickko.api.Models.User", b =>
                 {
                     b.Property<int>("Id")

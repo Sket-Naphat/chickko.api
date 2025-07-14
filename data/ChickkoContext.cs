@@ -13,10 +13,12 @@ namespace chickko.api.Data
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<OrderHeader> OrderHeaders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
-        public DbSet<LocationOrder> LocationOrders { get; set; }
         public DbSet<Ordertype> Ordertypes { get; set; }
         public DbSet<DischargeType> DischargeTypes { get; set; }
         public DbSet<Discount> Discounts { get; set; }
-
+        public DbSet<Stock> Stocks { get; set; } = null!;
+        public DbSet<StockLog> StockLogs { get; set; } = null!;
+        public DbSet<Category> Categories { get; set; } = null!;
+        public DbSet<Table> Tables { get; set; } = null!;
     }
 }

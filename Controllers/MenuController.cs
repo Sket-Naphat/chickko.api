@@ -23,7 +23,7 @@ namespace chickko.api.Controllers
         {
             return Ok(_service.GetMenus());
         }
-       
+
         [HttpGet("{id}")]
         public IActionResult GetMenu(int id)
         {
@@ -54,6 +54,19 @@ namespace chickko.api.Controllers
             var deleted = _service.DeleteMenu(id);
             if (!deleted) return NotFound();
             return NoContent();
+        }
+        [HttpPost("CopyMenusFromFirestore")]
+        public async Task<IActionResult> CopyMenusFromFirestore()
+        {
+            try
+            {
+                var result = await _service.CopyMenusFromFirestore();
+                return Ok(new { message = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

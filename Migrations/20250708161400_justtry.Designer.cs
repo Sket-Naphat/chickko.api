@@ -11,8 +11,8 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    [Migration("20250708161400_justtry")]
-    partial class justtry
+    [Migration("20250708161400_Justtry")]
+    partial class Justtry
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

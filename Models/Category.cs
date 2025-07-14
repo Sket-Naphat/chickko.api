@@ -13,5 +13,6 @@ namespace chickko.api.Models
 
         [MaxLength(255)]
         public string Description { get; set; } = null!;
+        public string CategoryInFirestore { get; set; } = string.Empty;
     }
 }

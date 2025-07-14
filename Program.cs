@@ -1,6 +1,7 @@
 using chickko.api.Data;
 using Microsoft.EntityFrameworkCore;
 using chickko.api.Services;
+using chickko.api.Interface;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,8 @@ builder.Services.AddDbContext<ChickkoContext>(options =>
 
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IOrdersService, OrdersService>();
+builder.Services.AddScoped<IUtilService, UtilService>(); // เพิ่ม IUtilService
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication("Bearer")

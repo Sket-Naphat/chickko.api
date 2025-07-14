@@ -9,5 +9,6 @@ namespace chickko.api.Services
         Menu CreateMenu(Menu menu);
         Menu? UpdateMenu(int id, Menu menu);
         bool DeleteMenu(int id);
+        Task<string> CopyMenusFromFirestore();
     }
 }

@@ -6,7 +6,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace chickko.api.Migrations
 {
     /// <inheritdoc />
-    public partial class justtry : Migration
+    public partial class Justtry : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

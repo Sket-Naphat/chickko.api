@@ -12,12 +12,9 @@ namespace chickko.api.Models
         [MaxLength(100)]
         public string CustomerName { get; set; } = string.Empty;
         [Required]
-        public int LocationOrderId { get; set; }  // Foreign Key
-        public LocationOrder LocationOrder { get; set; } = null!; // Navigation Property
+        public DateOnly? OrderDate { get; set; }
         [Required]
-        public DateOnly OrderDate { get; set; }
-        [Required]
-        public TimeOnly OrderTime { get; set; }
+        public TimeOnly? OrderTime { get; set; }
         [Required]
         public int OrderTypeId { get; set; }  // Foreign Key
         public Ordertype OrderType { get; set; } = null!; // Navigation Property
@@ -33,6 +30,9 @@ namespace chickko.api.Models
         public string OrderRemark { get; set; } = string.Empty;
         public int? DiscountID { get; set; } = 0; // Foreign Key
         public Discount? Discount { get; set; } // Navigation Property for Discount
+        public string? IdInFirestore { get; set; } // Optional field to store Firestore ID
+        public int? TableID { get; set; } // Optional field for table number
+        public Table? Table { get; set; } // Navigation Property for Table
     }
 
     public class OrderDetail
@@ -61,17 +61,7 @@ namespace chickko.api.Models
         public string? Remark { get; set; } // Optional remark for the order detail
 
     }
-    public class LocationOrder
-    {
-        [Key]
-        public int LocationOrderId { get; set; }
-
-        [Required]
-        public string LocationName { get; set; } = string.Empty;
-
-        public string? Description { get; set; }
-    }
-     public class Ordertype
+    public class Ordertype
     {
         [Key]
         public int OrderTypeId { get; set; }
@@ -101,6 +91,16 @@ namespace chickko.api.Models
 
         [Range(0, 100)]
         public decimal DiscountPercentage { get; set; }
+
+        public string? Description { get; set; }
+    }
+    public class Table
+    {
+        [Key]
+        public int TableID { get; set; }
+
+        [Required]
+        public string TableName { get; set; } = string.Empty;
 
         public string? Description { get; set; }
     }

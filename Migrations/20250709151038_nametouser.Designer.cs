@@ -12,8 +12,20 @@ namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
     [Migration("20250709151038_nametouser")]
-    partial class nametouser
+    partial class NameToUser : Migration
     {
+        /// <inheritdoc />
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            // Implement migration logic here if needed.
+        }
+
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+            // Implement rollback logic here if needed.
+        }
+
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

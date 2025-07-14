@@ -5,7 +5,7 @@
 namespace chickko.api.Migrations
 {
     /// <inheritdoc />
-    public partial class changeregis : Migration
+    public partial class ChangeRegis : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

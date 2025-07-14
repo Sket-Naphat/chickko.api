@@ -14,3 +14,5 @@ project.assets.json
 *.nuget.props
 *.nuget.targets
 *.nuget.dgspec.json
+
+Firebase/credentials.json
