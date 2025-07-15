@@ -26,19 +26,6 @@ namespace chickko.api.Controllers
             var token = _authService.GenerateJwtToken(loginUser);
             return Ok(new { token });
         }
-        // [HttpPost("register")]
-        //
-        // public IActionResult Register([FromBody] RegisterRequest request)
-        // {
-        //     if (!ModelState.IsValid)
-        //         return BadRequest(ModelState);
-
-        //     var user = _authService.Register(request);
-        //     if (user == null)
-        //         return BadRequest("User registration failed");
-
-        //     return CreatedAtAction(nameof(Login), new { username = user.Username }, user);
-        // }
 
         [HttpPost("register")]
         [AllowAnonymous]
