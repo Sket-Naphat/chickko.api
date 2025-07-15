@@ -55,7 +55,8 @@ namespace chickko.api.Models
 
         [Range(0, double.MaxValue)]
         public decimal Price { get; set; }
-        public List<OrderDetailTopping>? Toppings { get; set; } // For multiple toppings
+        public List<OrderDetailTopping> Toppings { get; set; } = new();
+
         public string? MenuIdInFirestore { get; set; } // Comma-separated list of topping IDs
         public bool IsDone { get; set; } = false; // Indicates if the order detail is completed
         public bool IsDischarge { get; set; } = false; // Indicates if the order detail is discharged
@@ -111,9 +112,19 @@ namespace chickko.api.Models
         public string OrderDateFrom { get; set; } = string.Empty;
         public string OrderDateTo { get; set; } = string.Empty;
     }
-    public class OrderDetailTopping
+   public class OrderDetailTopping
     {
-        public int MenuId { get; set; }  // Topping menu
+        public int OrderDetailToppingId { get; set; }
+
+        [Required]
+        public int OrderDetailId { get; set; }
+        public OrderDetail OrderDetail { get; set; } = null!;
+
+        [Required]
+        public int MenuId { get; set; } // ท็อปปิ้ง
         public Menu Menu { get; set; } = null!;
+
+        public decimal ToppingPrice { get; set; } = 0;
     }
+
 }

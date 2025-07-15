@@ -20,5 +20,69 @@ namespace chickko.api.Data
         public DbSet<StockLog> StockLogs { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
+        public DbSet<OrderDetailTopping> OrderDetailToppings { get; set; } = null!;
+
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            // OrderHeader ↔ OrderDetail (1:N)
+            modelBuilder.Entity<OrderHeader>()
+                .HasMany<OrderDetail>() // ใช้ HasMany เพื่อระบุความสัมพันธ์ 1:N
+                .WithOne(od => od.OrderHeader) // ใช้ WithOne เพื่อระบุความสัมพันธ์ N:1
+                .HasForeignKey(od => od.OrderId) // Foreign Key
+                .OnDelete(DeleteBehavior.Cascade); // ลบ order แล้วลบ detail ด้วย
+
+            // OrderDetail ↔ OrderDetailTopping (1:N)
+            modelBuilder.Entity<OrderDetail>()
+                .HasMany(od => od.Toppings) // ใช้ HasMany เพื่อระบุความสัมพันธ์ 1:N
+                .WithOne(t => t.OrderDetail) // ใช้ WithOne เพื่อระบุความสัมพันธ์ N:1
+                .HasForeignKey(t => t.OrderDetailId) // Foreign Key
+                .OnDelete(DeleteBehavior.Cascade); // ลบ detail แล้วลบ topping ด้วย
+
+            // OrderDetailTopping → Menu (N:1) [ท้อปปิ้ง]
+            modelBuilder.Entity<OrderDetailTopping>()
+                .HasOne(t => t.Menu)
+                .WithMany()
+                .HasForeignKey(t => t.MenuId)
+                .OnDelete(DeleteBehavior.Restrict); // ไม่ให้ลบเมนูแล้วกระทบ topping
+
+            // OrderDetail → Menu (N:1)
+            modelBuilder.Entity<OrderDetail>()
+                .HasOne(od => od.Menu)
+                .WithMany()
+                .HasForeignKey(od => od.MenuId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // OrderHeader → OrderType
+            modelBuilder.Entity<OrderHeader>()
+                .HasOne(o => o.OrderType)
+                .WithMany()
+                .HasForeignKey(o => o.OrderTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // OrderHeader → DischargeType
+            modelBuilder.Entity<OrderHeader>()
+                .HasOne(o => o.DischargeType)
+                .WithMany()
+                .HasForeignKey(o => o.DischargeTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // OrderHeader → Discount (nullable)
+            modelBuilder.Entity<OrderHeader>()
+                .HasOne(o => o.Discount)
+                .WithMany()
+                .HasForeignKey(o => o.DiscountID)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // OrderHeader → Table (nullable)
+            modelBuilder.Entity<OrderHeader>()
+                .HasOne(o => o.Table)
+                .WithMany()
+                .HasForeignKey(o => o.TableID)
+                .OnDelete(DeleteBehavior.SetNull);
+        }
+
     }
 }
