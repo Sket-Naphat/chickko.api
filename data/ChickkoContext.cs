@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using chickko.api.Models;
+using static OrdersService;
 
 namespace chickko.api.Data
 {
@@ -21,8 +22,7 @@ namespace chickko.api.Data
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<OrderDetailTopping> OrderDetailToppings { get; set; } = null!;
-
-
+        public DbSet<ImportOrderExcel> ImportOrdersExcel { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -82,6 +82,14 @@ namespace chickko.api.Data
                 .WithMany()
                 .HasForeignKey(o => o.TableID)
                 .OnDelete(DeleteBehavior.SetNull);
+
+
+
+            modelBuilder.Entity<ImportOrderExcel>(entity =>
+            {
+                entity.HasNoKey();          // เนื่องจาก table นี้ไม่มี Primary Key
+                entity.ToView(null);        // เพื่อไม่ให้ EF คิดว่าเป็น View จริง
+            });
         }
 
     }

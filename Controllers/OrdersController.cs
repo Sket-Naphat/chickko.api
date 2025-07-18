@@ -43,7 +43,13 @@ namespace chickko.api.Controllers
         [HttpPost("CopyOrderFromFirestore")]
         public async Task<IActionResult> CopyOrderFromFirestore(CopyOrderFromFirestore _CopyOrderFromFirestore)
         {
-            var result = await _ordersService.CopyOrderFromFirestore(_CopyOrderFromFirestore.OrderDateFrom.ToString() ?? "", _CopyOrderFromFirestore.OrderDateTo.ToString()?? "");
+            var result = await _ordersService.CopyOrderFromFirestore(_CopyOrderFromFirestore.OrderDateFrom.ToString() ?? "", _CopyOrderFromFirestore.OrderDateTo.ToString() ?? "");
+            return Ok(result);
+        }
+        [HttpPost("ImportOrderFromExcel")]
+        public async Task<IActionResult> ImportOrderFromExcel()
+        {
+            var result = await _ordersService.ImportOrderFromExcel();
             return Ok(result);
         }
     }
