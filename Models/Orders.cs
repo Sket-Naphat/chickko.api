@@ -33,6 +33,7 @@ namespace chickko.api.Models
         public string? IdInFirestore { get; set; } // Optional field to store Firestore ID
         public int? TableID { get; set; } // Optional field for table number
         public Table? Table { get; set; } // Navigation Property for Table
+        public int ItemQTY { get; set; }
     }
 
     public class OrderDetail
@@ -56,7 +57,7 @@ namespace chickko.api.Models
         [Range(0, double.MaxValue)]
         public decimal Price { get; set; }
         public List<OrderDetailTopping> Toppings { get; set; } = new();
-
+        public int ToppingQTY { get; set; }
         public string? MenuIdInFirestore { get; set; } // Comma-separated list of topping IDs
         public bool IsDone { get; set; } = false; // Indicates if the order detail is completed
         public bool IsDischarge { get; set; } = false; // Indicates if the order detail is discharged

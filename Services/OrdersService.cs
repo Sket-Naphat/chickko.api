@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using chickko.api.Data;
 using chickko.api.Interface;
 using chickko.api.Models;
@@ -11,13 +13,14 @@ public class OrdersService : IOrdersService
     private readonly IUtilService _utilService;
 
 
-    public class MockDocument
-    {
-        public string Id { get; set; }
-        public Dictionary<string, object> Data { get; set; }
+    // public class MockDocument
+    // {
+    //     [Key]
+    //     public int Id { get; set; }
+    //     public Dictionary<string, object> Data { get; set; } = new Dictionary<string, object> { };
 
-        public Dictionary<string, object> ToDictionary() => Data;
-    }
+    //     public Dictionary<string, object> ToDictionary() => Data;
+    // }
     public OrdersService(ChickkoContext context, ILogger<OrdersService> logger, IUtilService utilService)
     {
         _context = context;
@@ -31,94 +34,33 @@ public class OrdersService : IOrdersService
     {
         int copied = 0;
         string errorFromFirestoreID = "";
-        string errorCustomName = "";
-        string errorDischargeType = "";
         try
         {
-            var snapshot = await _utilService.GetSnapshotFromFirestoreWithFiltersBetween("orders", "orderDate", datefrom, dateto);
+            //var snapshot = await _utilService.GetSnapshotFromFirestoreWithFiltersBetween("orders", "orderDate", datefrom, dateto);
+            var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateLessThan(
+                    collectionName: "orders",
+                    orderByField: "orderDate",
+                    whereField: "orderDate",
+                    dateTo: datefrom
+                );
+            // var snapshot = await _utilService.GetSnapshotFromFirestoreWithID(
+            //             collectionName: "orders",DocumentId:"0PauDktHZcH3bvcUU1En"      
+            //         );
 
-            #region commented-out-mock-data
-            // var mockDocuments = new List<MockDocument>
-            // {
-            //     new MockDocument
-            //     {
-            //         Id = "007GnHvdsyUuqmMZ1BN7",
-            //         Data = new Dictionary<string, object>
-            //         {
-            //             { "customerName", "โต้ะ3" },
-            //             { "discharge", true },
-            //             { "dischargeTime", "19:46:28" },
-            //             { "dischargeType", "Promptpay" },
-            //             { "finishedOrder", true },
-            //             { "finishedOrderTime", "19:57:24" },
-            //             { "locationOrder", "forHere" },
-            //             { "orderDate", "2025-07-04" },
-            //             { "orderTime", "19:46:05" },
-            //             { "remark", "" },
-            //             { "tableNumber", "t3" },
-            //             { "items", new List<Dictionary<string, object>>
-            //                 {
-            //                     new Dictionary<string, object>
-            //                     {
-            //                         { "done", true },
-            //                         { "id", "hM8SHkyb8ZVezWCxR1ax+5gxjT8tCq42gUGKaYZbD+Ixb6dxsgiU62yJTzvFka" },
-            //                         { "is_done", false },
-            //                         { "itemDischarge", true },
-            //                         { "name", "รามยอนซอสเผ็ดไก่ทอด + ซอสเผ็ดสไตล์เกาหลี + ไข่กุ้ง" },
-            //                         { "price", 184 },
-            //                         { "quantity", 1 },
-            //                         { "remark", "" }
-            //                     },
-            //                     new Dictionary<string, object>
-            //                     {
-            //                         { "done", true },
-            //                         { "id", "l1CTBp1FecxclwX3IkAo" },
-            //                         { "is_done", false },
-            //                         { "itemDischarge", true },
-            //                         { "name", "น้ำเปล่า" },
-            //                         { "price", 10 },
-            //                         { "quantity", 1 },
-            //                         { "remark", "" }
-            //                     },
-            //                     new Dictionary<string, object>
-            //                     {
-            //                         { "done", true },
-            //                         { "id", "w8KsuJ04OGru35Yk6NLg" },
-            //                         { "is_done", false },
-            //                         { "itemDischarge", true },
-            //                         { "name", "สปาเก็ตตี่ผัดพริก +ไข่กุ้ง" },
-            //                         { "price", 159 },
-            //                         { "quantity", 1 },
-            //                         { "remark", "" }
-            //                     },
-            //                     new Dictionary<string, object>
-            //                     {
-            //                         { "done", true },
-            //                         { "id", "ZI8MUzVSAkYqE262OUgg" },
-            //                         { "is_done", false },
-            //                         { "itemDischarge", true },
-            //                         { "name", "มะนาวโซดา" },
-            //                         { "price", 45 },
-            //                         { "quantity", 1 },
-            //                         { "remark", "" }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            // };
-            #endregion
 
             foreach (var doc in snapshot.Documents)
             {
-                //select from orders where orderDate = doc.Data["orderDate"].ToString() and customerName = doc.Data["customerName"].ToString(); if exists then continue;
-
-
                 var data = doc.ToDictionary();
-                var existingOrder = _context.OrderHeaders
-                    .FirstOrDefault(o => o.OrderDate.ToString() == data["orderDate"].ToString() &&
-                                         o.CustomerName == data["customerName"].ToString());
 
+
+                var whereorderDate = DateOnly.Parse(data["orderDate"]?.ToString() ?? "");
+                var whereorderTime = TimeOnly.Parse(data["orderTime"]?.ToString() ?? "");
+                var wherecustomerName = data["customerName"]?.ToString();
+
+                var existingOrder = await _context.OrderHeaders
+                    .FirstOrDefaultAsync(o => o.OrderDate == whereorderDate &&
+                                            o.CustomerName == wherecustomerName &&
+                                            o.OrderTime == whereorderTime);
                 if (existingOrder != null)
                 {
                     _logger.LogInformation($"Order already exists for {data["customerName"]} on {data["orderDate"]}. Skipping.");
@@ -126,45 +68,30 @@ public class OrdersService : IOrdersService
                 }
                 else
                 {
-                    string dischargeName = "";
+                    //string dischargeName = (data["dischargeType"]?.ToString() ?? "Promptpay").Trim();
+                    string locName = (data["locationOrder"]?.ToString() ?? "forHere").Trim();
+                    string tableNumber = (data["tableNumber"]?.ToString() ?? "tw").Trim();
+
+                    string dischargeName = "Promptpay"; // fallback default
+
                     if (data.TryGetValue("dischargeType", out var dischargeRaw) && dischargeRaw != null)
                     {
-                        dischargeName = dischargeRaw.ToString().Trim();
-                    }
-                    string locName = data["locationOrder"]?.ToString() ?? "";
-                    string tableNumber = data["tableNumber"]?.ToString() ?? "";
-                    errorFromFirestoreID = doc.Id; // เก็บ ID ของเอกสาร Firestore เพื่อใช้ในกรณีเกิดข้อผิดพลาด
-                    errorCustomName = data["customerName"]?.ToString() ?? "";
-                    errorDischargeType = dischargeName;
-                    if (string.IsNullOrEmpty(dischargeName) || string.IsNullOrEmpty(locName))
-                    {
-                        _logger.LogWarning($"ข้อมูลไม่ครบสำหรับ Order ID: {doc.Id}");
-                        continue;
+                        dischargeName = dischargeRaw.ToString()!.Trim();
                     }
 
-                    Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.OrderTypeName == locName) ?? new Ordertype(); // ตรวจสอบว่า OrderType มีอยู่ในฐานข้อมูลหรือไม่
 
+                    Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.OrderTypeName == locName)!; // ตรวจสอบว่า OrderType มีอยู่ในฐานข้อมูลหรือไม่
+                    DischargeType _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == dischargeName)!;
+                    Table _Table = _context.Tables.FirstOrDefault(x => x.TableName == tableNumber)!; // ตรวจสอบว่า Table มีอยู่ในฐานข้อมูลหรือไม่
 
-                    // ดึงจากฐานข้อมูล ถ้าไม่เจอชื่อที่ได้มา → fallback เป็น "Promptpay"
-                    DischargeType _DischargeType = new DischargeType();
-                    if (!string.IsNullOrEmpty(dischargeName))
-                    {
-                        _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == dischargeName);
-
-                    }
-                    else
-                    {
-                        _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Promptpay");
-                    }
-                    //DischargeType _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == dischargeName) ?? new DischargeType(); // ตรวจสอบว่า DischargeType มีอยู่ในฐานข้อมูลหรือไม่
-                    Table _Table = _context.Tables.FirstOrDefault(x => x.TableName == tableNumber) ?? new Table(); // ตรวจสอบว่า Table มีอยู่ในฐานข้อมูลหรือไม่
                     var order = new OrderHeader
                     {
-                        CustomerName = data["customerName"]?.ToString() ?? "",
-                        OrderDate = DateOnly.TryParse(data["orderDate"]?.ToString(), out var orderDate) ? orderDate : null,
-                        OrderTime = TimeOnly.TryParse(data["orderTime"]?.ToString(), out var orderTime) ? orderTime : null,
-                        OrderTypeId = _OrderType?.OrderTypeId ?? 0,
-                        OrderType = _OrderType ?? new Ordertype() { OrderTypeName = locName }, // ใช้ค่าเริ่มต้นถ้าไม่พบ
+                        CustomerName = data["customerName"]?.ToString() ?? "ไม่ระบุชื้อ : " + data["orderDate"]?.ToString(),
+                        //OrderDate = DateOnly.TryParse(data["orderDate"]?.ToString(), out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now),
+                        OrderDate = DateOnly.TryParseExact(data["orderDate"]?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now),
+                        OrderTime = TimeOnly.TryParse(data["orderTime"]?.ToString(), out var orderTime) ? orderTime : TimeOnly.FromDateTime(DateTime.Now),
+                        OrderTypeId = _OrderType.OrderTypeId,
+                        OrderType = _OrderType, // ใช้ค่าเริ่มต้นถ้าไม่พบ
                         DischargeTypeId = _DischargeType.DischargeTypeId,
                         DischargeType = _DischargeType, // ใช้ค่าเริ่มต้นถ้าไม่พบ
                         DischargeTime = TimeOnly.TryParse(data["dischargeTime"]?.ToString(), out var dTime) ? dTime : null,
@@ -178,7 +105,8 @@ public class OrdersService : IOrdersService
                         Discount = null,
                         IdInFirestore = doc.Id,
                         TableID = _Table.TableID,
-                        Table = _Table ?? new Table() { TableName = tableNumber } // ใช้ค่าเริ่มต้นถ้าไม่พบ
+                        Table = _Table ?? new Table() { TableName = tableNumber }, // ใช้ค่าเริ่มต้นถ้าไม่พบ
+                        ItemQTY = 0
                     };
 
                     var items = data["items"] as IEnumerable<object>; // ตรวจสอบว่า items มีข้อมูลหรือไม่
@@ -190,14 +118,16 @@ public class OrdersService : IOrdersService
                         if (item == null) continue;
 
                         string itemName = item["name"]?.ToString() ?? "";
-                        var parts = itemName.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                        var baseItemName = parts.FirstOrDefault();
-                        if (baseItemName == null) continue;
+                        string firebaseID = item["id"]?.ToString() ?? "";
+                        //var parts = itemName.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        var parts = firebaseID.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                        var baseItemID = parts.FirstOrDefault();
+                        if (baseItemID == null) continue;
 
-                        var menu = _context.Menus.FirstOrDefault(x => x.Name == baseItemName);
+                        var menu = _context.Menus.FirstOrDefault(x => x.MenuIdInFirestore == baseItemID);
                         if (menu == null)
                         {
-                            _logger.LogWarning($"ไม่พบเมนูหลักชื่อ '{baseItemName}' ในฐานข้อมูล");
+                            _logger.LogWarning($"ไม่พบเมนูหลักชื่อ '{baseItemID}' ในฐานข้อมูล");
                             continue;
                         }
                         _context.Attach(menu); // ป้องกัน EF เพิ่มซ้ำ
@@ -213,18 +143,19 @@ public class OrdersService : IOrdersService
                             MenuId = menu.Id,
                             Menu = menu,
                             Quantity = Convert.ToInt32(item["quantity"]),
-                            Price = Convert.ToDecimal(item["price"]),
+                            Price = menu.Price,
                             Toppings = new List<OrderDetailTopping>(),
                             MenuIdInFirestore = item["id"]?.ToString() ?? "",
                             IsDone = _isDone,
                             IsDischarge = _isDischarge,
-                            Remark = item["remark"]?.ToString() ?? ""
+                            Remark = item["remark"]?.ToString() ?? "",
+                            ToppingQTY = 0
                         };
 
                         var toppingNames = parts.Skip(1);
                         foreach (var tName in toppingNames)
                         {
-                            var topping = _context.Menus.FirstOrDefault(x => x.Name == tName.Trim());
+                            var topping = _context.Menus.FirstOrDefault(x => x.MenuIdInFirestore == tName.Trim());
                             if (topping != null)
                             {
                                 _context.Attach(topping);
@@ -237,18 +168,20 @@ public class OrdersService : IOrdersService
                                 });
 
                                 // เพิ่มราคาท้อปปิ้ง
-                                //detail.Price += topping.Price;
+                                detail.Price += topping.Price;
                             }
                             else
                             {
                                 _logger.LogWarning($"Topping ไม่พบในฐานข้อมูล: {tName.Trim()}");
                             }
+                            detail.ToppingQTY += 1;
                         }
 
                         // คำนวณยอดรวมคำสั่งซื้อ
                         order.TotalPrice += detail.Price * detail.Quantity;
 
                         _context.OrderDetails.Add(detail);
+                        order.ItemQTY += 1;
                     }
 
                     _context.OrderHeaders.Add(order);
@@ -298,7 +231,7 @@ public class OrdersService : IOrdersService
         try
         {
             var importData = await _context.Set<ImportOrderExcel>()
-                .FromSqlRaw("SELECT * FROM import_orders_excel where order_date ='2025-01-03' ORDER BY order_date, order_time, customer_name")
+                .FromSqlRaw("SELECT * FROM import_orders_excel ORDER BY order_date, order_time, customer_name")
                 .ToListAsync();
 
             var groupedOrders = importData
@@ -316,7 +249,8 @@ public class OrdersService : IOrdersService
                 if (string.IsNullOrWhiteSpace(key.customer) || string.IsNullOrWhiteSpace(key.date))
                     continue;
 
-                if (!DateOnly.TryParse(key.date, out var parsedDate))
+
+                if (!DateOnly.TryParseExact(key.date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
                 {
                     _logger.LogWarning($"❌ วันที่ไม่ถูกต้อง: {key.date}");
                     continue;
@@ -341,26 +275,26 @@ public class OrdersService : IOrdersService
 
                 var first = group.First();
 
-                Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.OrderTypeName == first.discharge_type) ?? new Ordertype(); // ตรวจสอบว่า OrderType มีอยู่ในฐานข้อมูลหรือไม่
+                Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.Description == first.discharge_type) ?? new Ordertype(); // ตรวจสอบว่า OrderType มีอยู่ในฐานข้อมูลหรือไม่
                 DischargeType _DischargeType = new DischargeType();
                 if (first.cash_price != "0")
                 {
-                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Promptpay");
+                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Promptpay") ?? new DischargeType { };
                 }
                 else if (first.promptpay_price != "0")
                 {
-                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Cash");
+                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Cash") ?? new DischargeType { };
                 }
                 else if (first.discharge_type == "grab")
                 {
-                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Grab");
+                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Grab") ?? new DischargeType { };
                 }
                 else
                 {
-                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Promptpay");
+                    _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == "Promptpay") ?? new DischargeType { };
                 }
-                 Table _Table = _context.Tables.FirstOrDefault(x => x.TableName == "none") ?? new Table(); // ตรวจสอบว่า Table มีอยู่ในฐานข้อมูลหรือไม่
-                 
+                Table _Table = _context.Tables.FirstOrDefault(x => x.TableName == "tw") ?? new Table(); // ตรวจสอบว่า Table มีอยู่ในฐานข้อมูลหรือไม่
+
                 var orderHeader = new OrderHeader
                 {
                     CustomerName = key.customer,
@@ -377,14 +311,15 @@ public class OrdersService : IOrdersService
                     FinishOrderTime = TimeOnly.TryParse(first.finish_order_time, out var fTime) ? fTime : null,
                     IsFinishOrder = !string.IsNullOrWhiteSpace(first.finish_order_time),
                     TotalPrice = 0,
-                    OrderRemark =  "",
+                    OrderRemark = "",
                     DiscountID = null,
                     Discount = null,
                     IdInFirestore = "",
                     TableID = _Table.TableID,
-                    Table = _Table ?? new Table()// ใช้ค่าเริ่มต้นถ้าไม่พบ
+                    Table = _Table ?? new Table(),// ใช้ค่าเริ่มต้นถ้าไม่พบ
+                    ItemQTY = 0
                 };
-                
+
                 foreach (var item in group)
                 {
                     if (string.IsNullOrWhiteSpace(item.menu_name)) continue;
@@ -413,9 +348,10 @@ public class OrdersService : IOrdersService
                         MenuIdInFirestore = "",
                         Toppings = new List<OrderDetailTopping>()
                     };
-                       
+
                     orderHeader.TotalPrice += price * quantity;
                     _context.OrderDetails.Add(orderDetail);
+                    orderHeader.ItemQTY += 1;
                 }
 
                 _context.OrderHeaders.Add(orderHeader);
@@ -436,100 +372,4 @@ public class OrdersService : IOrdersService
             return "❌ เกิดข้อผิดพลาด: " + ex.Message;
         }
     }
-
-    // public async Task<string> ImportOrderFromExcel()
-    // {
-    //     int copied = 0;
-
-    //     try
-    //     {
-    //         var importData = await _context.Set<ImportOrderExcel>()
-    //             .FromSqlRaw("SELECT * FROM import_orders_excel where order_date ='2025-01-03' ORDER BY order_date, order_time, customer_name")
-    //             .ToListAsync();
-
-
-    //         foreach (var data in importData)
-    //         {
-
-    //             var existingOrder = await _context.OrderHeaders.FirstOrDefaultAsync(o =>
-    //                 o.CustomerName == data.customer_name &&
-    //                 o.OrderDate == TimeOnly.TryParse(first.finish_order_time, out var fTime) ? fTime : null, data.order_date &&
-    //                 o.OrderTime == TimeOnly.TryParse(data.order_time, out var fTime) ? fTime : null);
-
-    //             if (existingOrder != null)
-    //             {
-    //                 _logger.LogInformation($"⚠️ ซ้ำ: {key.customer} {key.date} {key.time}");
-    //                 continue;
-    //             }
-
-    //             var first = group.First();
-
-    //             var orderHeader = new OrderHeader
-    //             {
-    //                 CustomerName = key.customer,
-    //                 OrderDate = parsedDate,
-    //                 OrderTime = parsedTime,
-    //                 FinishOrderTime = TimeOnly.TryParse(first.finish_order_time, out var fTime) ? fTime : null,
-    //                 DischargeTime = TimeOnly.TryParse(first.discharge_time, out var dTime) ? dTime : null,
-    //                 IsDischarge = !string.IsNullOrWhiteSpace(first.discharge_time),
-    //                 IsFinishOrder = !string.IsNullOrWhiteSpace(first.finish_order_time),
-    //                 DischargeTypeId = 3,
-    //                 OrderTypeId = 1, // 🟢 Default
-    //                 DiscountID = 0,  // 🟢 Default (nullable)
-    //                 TableID = null,  // 🟢 Default
-    //                 OrderRemark = string.Empty,
-    //                 IdInFirestore = null,
-    //                 TotalPrice = 0
-    //             };
-
-    //             foreach (var item in group)
-    //             {
-    //                 if (string.IsNullOrWhiteSpace(item.menu_name)) continue;
-
-    //                 var baseItem = await _context.Menus.FirstOrDefaultAsync(m => m.Name == item.menu_name.Trim());
-    //                 if (baseItem == null)
-    //                 {
-    //                     _logger.LogWarning($"❌ เมนูไม่พบ: {item.menu_name}");
-    //                     continue;
-    //                 }
-
-    //                 var quantity = int.TryParse(item.qty, out var qtyVal) ? qtyVal : 1;
-    //                 var price = decimal.TryParse(item.price, out var priceVal) ? priceVal : baseItem.Price;
-
-    //                 var orderDetail = new OrderDetail
-    //                 {
-    //                     OrderHeader = orderHeader,
-    //                     MenuId = baseItem.Id,
-    //                     Quantity = quantity,
-    //                     Price = price,
-    //                     Menu = baseItem,
-    //                     IsDone = false,
-    //                     IsDischarge = false,
-    //                     Remark = string.Empty,
-    //                     MenuIdInFirestore = null
-    //                 };
-
-    //                 orderHeader.TotalPrice += price * quantity;
-    //                 _context.OrderDetails.Add(orderDetail);
-    //             }
-
-    //             _context.OrderHeaders.Add(orderHeader);
-    //             await _context.SaveChangesAsync();
-    //             copied++;
-    //         }
-
-    //         return $"✅ คัดลอกคำสั่งซื้อแล้วทั้งหมด {copied} รายการ";
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _logger.LogError(ex, "❌ เกิดข้อผิดพลาดระหว่าง import");
-    //         if (ex.InnerException != null)
-    //         {
-    //             _logger.LogError("🔥 InnerException: " + ex.InnerException.Message);
-    //         }
-
-    //         return "❌ เกิดข้อผิดพลาด: " + ex.Message;
-    //     }
-    // }
-
 }

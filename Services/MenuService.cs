@@ -73,7 +73,13 @@ namespace chickko.api.Services
             try
             {
                 //ดึงข้อมูลจาก Firestore
-                var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu","category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
+                // var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu","category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
+                var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateLessThan(
+                                            collectionName: "orders",
+                                            orderByField: "orderDate",
+                                            whereField: "orderDate",
+                                            dateTo: "2025-07-19"
+                                        );
                 if (snapshot.Documents.Count == 0)
                 {
                     return "ไม่มีเมนูใน Firestore ที่จะคัดลอก";

@@ -67,5 +67,39 @@ namespace chickko.api.Services
 
             return await query.GetSnapshotAsync();
         }
+        public async Task<QuerySnapshot> GetSnapshotFromFirestoreWithDateLessThan(
+           string collectionName,
+           string? orderByField = null,
+           string? whereField = null,
+           string? dateTo = null)
+        {
+            // สร้าง instance ของ Firestore
+            var db = GetFirestoreDb();
+
+            // เริ่มสร้าง query จาก collection ที่ระบุ
+            Query query = db.Collection(collectionName);
+
+            // ถ้ามีการระบุ orderByField ให้จัดเรียงผลลัพธ์ตาม field นั้น
+            if (!string.IsNullOrEmpty(orderByField))
+                query = query.OrderBy(orderByField);
+
+            // ถ้ามีการระบุ whereField และ dateTo ให้กรองข้อมูลที่ whereField < dateTo
+            if (!string.IsNullOrEmpty(whereField) && !string.IsNullOrEmpty(dateTo))
+                query = query.WhereGreaterThan(whereField, dateTo);
+
+            // ดึง snapshot จาก query ที่สร้าง
+            return await query.GetSnapshotAsync();
+        }
+        public async Task<QuerySnapshot> GetSnapshotFromFirestoreWithID(string collectionName, string documentId)
+        {
+            var db = GetFirestoreDb();
+
+            // ใช้ Query แทน DocumentRef เพื่อให้ได้ QuerySnapshot
+            var query = db.Collection(collectionName)
+                        .WhereEqualTo(FieldPath.DocumentId, documentId);
+
+            return await query.GetSnapshotAsync();
+        }
+
     }
 }
