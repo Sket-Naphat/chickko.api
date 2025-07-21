@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250721161300_AddModelCostStockWorkTime")]
+    partial class AddModelCostStockWorkTime
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -464,7 +467,7 @@ namespace chickko.api.Migrations
 
                     b.HasKey("StockId");
 
-                    b.ToTable("Stock");
+                    b.ToTable("Stocks");
                 });
 
             modelBuilder.Entity("chickko.api.Models.StockLog", b =>
@@ -516,35 +519,7 @@ namespace chickko.api.Migrations
 
                     b.HasIndex("StockId");
 
-                    b.ToTable("StockLog");
-                });
-
-            modelBuilder.Entity("chickko.api.Models.Supplier", b =>
-                {
-                    b.Property<int>("SupplyId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SupplyId"));
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SupplyContact")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("SupplyName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("SupplyId");
-
-                    b.ToTable("Supplier");
+                    b.ToTable("StockLogs");
                 });
 
             modelBuilder.Entity("chickko.api.Models.Table", b =>
@@ -612,54 +587,6 @@ namespace chickko.api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("chickko.api.Models.WorkTime", b =>
-                {
-                    b.Property<int>("WorkTimeID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("WorkTimeID"));
-
-                    b.Property<bool>("Active")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("ClockInLocation")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsPurchese")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("Price")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Remark")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<TimeOnly>("TimeClockIn")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly>("TimeClockOut")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<int>("TotalWirkTime")
-                        .HasColumnType("integer");
-
-                    b.Property<DateOnly>("WorkDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("bonus")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("wage")
-                        .HasColumnType("integer");
-
-                    b.HasKey("WorkTimeID");
-
-                    b.ToTable("WorkTime");
                 });
 
             modelBuilder.Entity("chickko.api.Models.Cost", b =>

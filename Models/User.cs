@@ -11,6 +11,7 @@ namespace chickko.api.Models
         public DateTime StartWorkDate { get; set; } = DateTime.UtcNow; // วันที่เริ่มทำงาน
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // วันที่สร้างผู้ใช้
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow; // วันที่แก้ไขล่าสุด
-        public bool IsActive { get; set; } = true; // สถานะการใช้งานของผู้ใช้ 
+        public bool IsActive { get; set; } = false; // สถานะการใช้งานของผู้ใช้ 
+        public string Contact { get; set; } = "";
     }
 }
