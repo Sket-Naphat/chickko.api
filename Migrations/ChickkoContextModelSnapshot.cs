@@ -144,6 +144,31 @@ namespace chickko.api.Migrations
                     b.ToTable("Discounts");
                 });
 
+            modelBuilder.Entity("chickko.api.Models.ErrorLog", b =>
+                {
+                    b.Property<int>("LogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LogId"));
+
+                    b.Property<DateOnly?>("ErrorDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ErrorFile")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ErrorMassage")
+                        .HasColumnType("text");
+
+                    b.Property<TimeOnly?>("ErrorTime")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("LogId");
+
+                    b.ToTable("ErrorLog");
+                });
+
             modelBuilder.Entity("chickko.api.Models.Menu", b =>
                 {
                     b.Property<int>("Id")

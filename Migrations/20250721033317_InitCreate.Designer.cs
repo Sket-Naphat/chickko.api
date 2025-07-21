@@ -12,8 +12,8 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    [Migration("20250712064207_addStockAndMenuCodeFromFirebase")]
-    partial class addStockAndMenuCodeFromFirebase
+    [Migration("20250721033317_InitCreate")]
+    partial class InitCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,6 +25,58 @@ namespace chickko.api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("OrdersService+ImportOrderExcel", b =>
+                {
+                    b.Property<string>("cash_price")
+                        .HasColumnType("text");
+
+                    b.Property<string>("cost")
+                        .HasColumnType("text");
+
+                    b.Property<string>("customer_name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("discharge_time")
+                        .HasColumnType("text");
+
+                    b.Property<string>("discharge_type")
+                        .HasColumnType("text");
+
+                    b.Property<string>("finish_order_time")
+                        .HasColumnType("text");
+
+                    b.Property<string>("menu_name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("order_date")
+                        .HasColumnType("text");
+
+                    b.Property<string>("order_time")
+                        .HasColumnType("text");
+
+                    b.Property<string>("price")
+                        .HasColumnType("text");
+
+                    b.Property<string>("profit")
+                        .HasColumnType("text");
+
+                    b.Property<string>("promptpay_price")
+                        .HasColumnType("text");
+
+                    b.Property<string>("qty")
+                        .HasColumnType("text");
+
+                    b.Property<string>("unit_cost")
+                        .HasColumnType("text");
+
+                    b.Property<string>("unit_price")
+                        .HasColumnType("text");
+
+                    b.ToTable((string)null);
+
+                    b.ToView(null, (string)null);
+                });
+
             modelBuilder.Entity("chickko.api.Models.Category", b =>
                 {
                     b.Property<int>("CategoryId")
@@ -32,6 +84,10 @@ namespace chickko.api.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CategoryId"));
+
+                    b.Property<string>("CategoryInFirestore")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("CategoryName")
                         .IsRequired()
@@ -45,7 +101,7 @@ namespace chickko.api.Migrations
 
                     b.HasKey("CategoryId");
 
-                    b.ToTable("Category");
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("chickko.api.Models.DischargeType", b =>
@@ -91,24 +147,29 @@ namespace chickko.api.Migrations
                     b.ToTable("Discounts");
                 });
 
-            modelBuilder.Entity("chickko.api.Models.LocationOrder", b =>
+            modelBuilder.Entity("chickko.api.Models.ErrorLog", b =>
                 {
-                    b.Property<int>("LocationOrderId")
+                    b.Property<int>("LogId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LocationOrderId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LogId"));
 
-                    b.Property<string>("Description")
+                    b.Property<DateOnly?>("ErrorDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ErrorFile")
                         .HasColumnType("text");
 
-                    b.Property<string>("LocationName")
-                        .IsRequired()
+                    b.Property<string>("ErrorMassage")
                         .HasColumnType("text");
 
-                    b.HasKey("LocationOrderId");
+                    b.Property<TimeOnly?>("ErrorTime")
+                        .HasColumnType("time without time zone");
 
-                    b.ToTable("LocationOrders");
+                    b.HasKey("LogId");
+
+                    b.ToTable("ErrorLog");
                 });
 
             modelBuilder.Entity("chickko.api.Models.Menu", b =>
@@ -128,10 +189,6 @@ namespace chickko.api.Migrations
                     b.Property<decimal>("Cost")
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<string>("IdInFirestore")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("ImageUrl")
                         .IsRequired()
                         .HasColumnType("text");
@@ -139,13 +196,14 @@ namespace chickko.api.Migrations
                     b.Property<bool>("IsTopping")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("MenuIdInFirestore")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
-
-                    b.Property<int?>("OrderDetailId")
-                        .HasColumnType("integer");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10,2)");
@@ -153,8 +211,6 @@ namespace chickko.api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
-
-                    b.HasIndex("OrderDetailId");
 
                     b.ToTable("Menus");
                 });
@@ -176,8 +232,8 @@ namespace chickko.api.Migrations
                     b.Property<int>("MenuId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("OrderHeaderOrderId")
-                        .HasColumnType("integer");
+                    b.Property<string>("MenuIdInFirestore")
+                        .HasColumnType("text");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("integer");
@@ -191,13 +247,42 @@ namespace chickko.api.Migrations
                     b.Property<string>("Remark")
                         .HasColumnType("text");
 
+                    b.Property<int>("ToppingQTY")
+                        .HasColumnType("integer");
+
                     b.HasKey("OrderDetailId");
 
                     b.HasIndex("MenuId");
 
-                    b.HasIndex("OrderHeaderOrderId");
+                    b.HasIndex("OrderId");
 
                     b.ToTable("OrderDetails");
+                });
+
+            modelBuilder.Entity("chickko.api.Models.OrderDetailTopping", b =>
+                {
+                    b.Property<int>("OrderDetailToppingId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderDetailToppingId"));
+
+                    b.Property<int>("MenuId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderDetailId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("ToppingPrice")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("OrderDetailToppingId");
+
+                    b.HasIndex("MenuId");
+
+                    b.HasIndex("OrderDetailId");
+
+                    b.ToTable("OrderDetailToppings");
                 });
 
             modelBuilder.Entity("chickko.api.Models.OrderHeader", b =>
@@ -225,13 +310,16 @@ namespace chickko.api.Migrations
                     b.Property<TimeOnly?>("FinishOrderTime")
                         .HasColumnType("time without time zone");
 
+                    b.Property<string>("IdInFirestore")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsDischarge")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsFinishOrder")
                         .HasColumnType("boolean");
 
-                    b.Property<int>("LocationOrderId")
+                    b.Property<int>("ItemQTY")
                         .HasColumnType("integer");
 
                     b.Property<DateOnly>("OrderDate")
@@ -247,6 +335,9 @@ namespace chickko.api.Migrations
                     b.Property<int>("OrderTypeId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("TableID")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("numeric");
 
@@ -256,9 +347,9 @@ namespace chickko.api.Migrations
 
                     b.HasIndex("DiscountID");
 
-                    b.HasIndex("LocationOrderId");
-
                     b.HasIndex("OrderTypeId");
+
+                    b.HasIndex("TableID");
 
                     b.ToTable("OrderHeaders");
                 });
@@ -281,6 +372,80 @@ namespace chickko.api.Migrations
                     b.HasKey("OrderTypeId");
 
                     b.ToTable("Ordertypes");
+                });
+
+            modelBuilder.Entity("chickko.api.Models.Stock", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Remark")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("RequiredQuantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Stocks");
+                });
+
+            modelBuilder.Entity("chickko.api.Models.StockLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("QuantityToPurchase")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RemainingQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StockId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("StockInDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("StockInQuantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StockId");
+
+                    b.ToTable("StockLogs");
+                });
+
+            modelBuilder.Entity("chickko.api.Models.Table", b =>
+                {
+                    b.Property<int>("TableID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TableID"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TableName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("TableID");
+
+                    b.ToTable("Tables");
                 });
 
             modelBuilder.Entity("chickko.api.Models.User", b =>
@@ -332,10 +497,6 @@ namespace chickko.api.Migrations
                         .WithMany()
                         .HasForeignKey("CategoryId");
 
-                    b.HasOne("chickko.api.Models.OrderDetail", null)
-                        .WithMany("Toppings")
-                        .HasForeignKey("OrderDetailId");
-
                     b.Navigation("Category");
                 });
 
@@ -344,12 +505,12 @@ namespace chickko.api.Migrations
                     b.HasOne("chickko.api.Models.Menu", "Menu")
                         .WithMany()
                         .HasForeignKey("MenuId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("chickko.api.Models.OrderHeader", "OrderHeader")
                         .WithMany()
-                        .HasForeignKey("OrderHeaderOrderId")
+                        .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -358,37 +519,67 @@ namespace chickko.api.Migrations
                     b.Navigation("OrderHeader");
                 });
 
+            modelBuilder.Entity("chickko.api.Models.OrderDetailTopping", b =>
+                {
+                    b.HasOne("chickko.api.Models.Menu", "Menu")
+                        .WithMany()
+                        .HasForeignKey("MenuId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("chickko.api.Models.OrderDetail", "OrderDetail")
+                        .WithMany("Toppings")
+                        .HasForeignKey("OrderDetailId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Menu");
+
+                    b.Navigation("OrderDetail");
+                });
+
             modelBuilder.Entity("chickko.api.Models.OrderHeader", b =>
                 {
                     b.HasOne("chickko.api.Models.DischargeType", "DischargeType")
                         .WithMany()
                         .HasForeignKey("DischargeTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("chickko.api.Models.Discount", "Discount")
                         .WithMany()
-                        .HasForeignKey("DiscountID");
-
-                    b.HasOne("chickko.api.Models.LocationOrder", "LocationOrder")
-                        .WithMany()
-                        .HasForeignKey("LocationOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DiscountID")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("chickko.api.Models.Ordertype", "OrderType")
                         .WithMany()
                         .HasForeignKey("OrderTypeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("chickko.api.Models.Table", "Table")
+                        .WithMany()
+                        .HasForeignKey("TableID")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("DischargeType");
 
                     b.Navigation("Discount");
 
-                    b.Navigation("LocationOrder");
-
                     b.Navigation("OrderType");
+
+                    b.Navigation("Table");
+                });
+
+            modelBuilder.Entity("chickko.api.Models.StockLog", b =>
+                {
+                    b.HasOne("chickko.api.Models.Stock", "Stock")
+                        .WithMany()
+                        .HasForeignKey("StockId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Stock");
                 });
 
             modelBuilder.Entity("chickko.api.Models.OrderDetail", b =>
