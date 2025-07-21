@@ -274,6 +274,10 @@ public class OrdersService : IOrdersService
                 }
 
                 var first = group.First();
+                if (string.IsNullOrEmpty(first.discharge_type))
+                {
+                    first.discharge_type = "ทานที่ร้าน";
+                }
 
                 Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.Description == first.discharge_type) ?? new Ordertype(); // ตรวจสอบว่า OrderType มีอยู่ในฐานข้อมูลหรือไม่
                 DischargeType _DischargeType = new DischargeType();
@@ -349,7 +353,7 @@ public class OrdersService : IOrdersService
                         Toppings = new List<OrderDetailTopping>()
                     };
 
-                    orderHeader.TotalPrice += price * quantity;
+                    orderHeader.TotalPrice += price;//* quantity;
                     _context.OrderDetails.Add(orderDetail);
                     orderHeader.ItemQTY += 1;
                 }

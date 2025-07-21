@@ -73,13 +73,7 @@ namespace chickko.api.Services
             try
             {
                 //ดึงข้อมูลจาก Firestore
-                // var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu","category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
-                var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateLessThan(
-                                            collectionName: "orders",
-                                            orderByField: "orderDate",
-                                            whereField: "orderDate",
-                                            dateTo: "2025-07-19"
-                                        );
+                 var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu","category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
                 if (snapshot.Documents.Count == 0)
                 {
                     return "ไม่มีเมนูใน Firestore ที่จะคัดลอก";
@@ -93,7 +87,7 @@ namespace chickko.api.Services
 
                     // 1. Map ข้อมูลหลักจาก Firestore
                     var categoryName = data["category"]?.ToString() ?? "";
-                    int categoryId = _context.Categories.First(x => x.CategoryInFirestore == categoryName).CategoryId;
+                    Category _Category = _context.Categories.First(x => x.CategoryInFirestore == categoryName);
 
                     var menu = new Menu
                     {
@@ -104,7 +98,8 @@ namespace chickko.api.Services
                         ImageUrl = data["imgPath"]?.ToString() ?? "",
                         Active = Convert.ToBoolean(data["active"]),
                         IsTopping = Convert.ToBoolean(data["addTopping"]),
-                        CategoryId = categoryId
+                        CategoryId = _Category.CategoryId,
+                        Category = _Category
                     };
 
                     // 3. บันทึก OrderHeader ก่อน เพื่อให้ได้ OrderId
