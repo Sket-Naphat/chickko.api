@@ -40,6 +40,7 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins(
                 "https://chickkoapp.web.app", // ✅ เพิ่ม origin ของ frontend ตัวจริง
+                "https://chickkoapi.up.railway.app",
                 "http://localhost:5500",
                 "http://127.0.0.1:5500"
             )

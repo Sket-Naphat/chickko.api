@@ -33,7 +33,6 @@ public class OrdersService : IOrdersService
     public async Task<string> CopyOrderFromFirestore(string datefrom = "", string dateto = "")
     {
         int copied = 0;
-        string errorFromFirestoreID = "";
         try
         {
             //var snapshot = await _utilService.GetSnapshotFromFirestoreWithFiltersBetween("orders", "orderDate", datefrom, dateto);
@@ -203,7 +202,7 @@ public class OrdersService : IOrdersService
                 _logger.LogError("🔥 InnerException: " + ex.InnerException.Message);
                 Console.WriteLine("🔥 InnerException: " + ex.InnerException.Message);
             }
-            return "❌ เกิดข้อผิดพลาด กรุณาตรวจสอบ " + errorFromFirestoreID + " เพิ่มเติม";
+            return "❌ เกิดข้อผิดพลาด กรุณาตรวจสอบ " + ex.Message + " เพิ่มเติม";
         }
     }
     public class ImportOrderExcel
