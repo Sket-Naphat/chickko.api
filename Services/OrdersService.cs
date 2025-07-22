@@ -5,6 +5,7 @@ using chickko.api.Interface;
 using chickko.api.Models;
 using chickko.api.Services;
 using Google.Cloud.Firestore;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 public class OrdersService : IOrdersService
 {
@@ -51,15 +52,34 @@ public class OrdersService : IOrdersService
             {
                 var data = doc.ToDictionary();
 
+                // var whereorderDate = DateOnly.Parse(data["orderDate"]?.ToString() ?? "");
+                // var whereorderTime = TimeOnly.Parse(data["orderTime"]?.ToString() ?? "");
+                // var wherecustomerName = data["customerName"]?.ToString();
 
-                var whereorderDate = DateOnly.Parse(data["orderDate"]?.ToString() ?? "");
-                var whereorderTime = TimeOnly.Parse(data["orderTime"]?.ToString() ?? "");
-                var wherecustomerName = data["customerName"]?.ToString();
+                // var existingOrder = await _context.OrderHeaders
+                //     .FirstOrDefaultAsync(o =>
+                //         o.OrderDate == whereorderDate &&
+                //         o.CustomerName == wherecustomerName &&
+                //         o.OrderTime.ToString() == whereorderTime.ToString("hh:mm:ss")
+                //     );
+
+                //เปลี่ยนมาใช้ query ตรงเนื่องจาก where ด้วย TimeOnly ไม่ได้สักที
+
+                var _orderDate = DateOnly.Parse(data["orderDate"]?.ToString() ?? "").ToString("yyyy-MM-dd");
+                var _orderTime = TimeOnly.Parse(data["orderTime"]?.ToString() ?? "").ToString("HH:mm:ss");
+                var _customerName = data["customerName"]?.ToString()?.Replace("'", "''"); // escape ' ด้วย
+
+                var sql = $@"
+                    SELECT * FROM ""OrderHeaders"" 
+                    WHERE ""OrderDate"" = '{_orderDate}' 
+                    AND ""OrderTime"" = '{_orderTime}' 
+                    AND ""CustomerName"" = '{_customerName}'";
 
                 var existingOrder = await _context.OrderHeaders
-                    .FirstOrDefaultAsync(o => o.OrderDate == whereorderDate &&
-                                            o.CustomerName == wherecustomerName &&
-                                            o.OrderTime == whereorderTime);
+                    .FromSqlRaw(sql)
+                    .FirstOrDefaultAsync();
+
+
                 if (existingOrder != null)
                 {
                     _logger.LogInformation($"Order already exists for {data["customerName"]} on {data["orderDate"]}. Skipping.");
@@ -191,8 +211,13 @@ public class OrdersService : IOrdersService
                 }
 
             }
+            string returnString = $"✅ คัดลอกคำสั่งซื้อจาก Firestore แล้วทั้งหมด {copied} รายการ";
+            if (copied == 0)
+            {
+                returnString = $"✅ การคัดลอกคำสั่งซื้อจาก Firestore Update ล่าสุดอยู่แล้ว";
+            }
 
-            return $"✅ คัดลอกคำสั่งซื้อจาก Firestore แล้วทั้งหมด {copied} รายการ";
+            return returnString;
         }
         catch (Exception ex)
         {

@@ -52,11 +52,10 @@ var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CRE
 
 if (!string.IsNullOrEmpty(credentialsJson))
 {
-    var filePath = "/tmp/gcp-credentials.json";
+    var filePath = Path.Combine(Path.GetTempPath(), "gcp-credentials.json");
     File.WriteAllText(filePath, credentialsJson);
     Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
 }
-
 var app = builder.Build();
 app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())
