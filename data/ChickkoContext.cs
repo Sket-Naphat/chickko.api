@@ -30,6 +30,9 @@ namespace chickko.api.Data
         public DbSet<Stock> Stock { get; set; } = null!;
         public DbSet<StockLog> StockLog { get; set; } = null!;
         public DbSet<Supplier> Supplier { get; set; } = null!;
+        public DbSet<StockCategory> StockCategory { get; set; } = null!;
+        public DbSet<StockUnitType> StockUnitType { get; set; } = null!;
+        public DbSet<StockLocation> StockLocation { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
