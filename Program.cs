@@ -57,6 +57,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+
+if (!string.IsNullOrEmpty(credentialsJson))
+{
+    var filePath = "/tmp/gcp-credentials.json";
+    File.WriteAllText(filePath, credentialsJson);
+    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
+}
 
 app.UseHttpsRedirection();
 
