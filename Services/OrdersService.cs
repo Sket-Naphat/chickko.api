@@ -36,7 +36,7 @@ public class OrdersService : IOrdersService
         try
         {
             //var snapshot = await _utilService.GetSnapshotFromFirestoreWithFiltersBetween("orders", "orderDate", datefrom, dateto);
-            var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateLessThan(
+            var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateGreaterThan(
                     collectionName: "orders",
                     orderByField: "orderDate",
                     whereField: "orderDate",

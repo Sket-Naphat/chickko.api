@@ -10,7 +10,7 @@ namespace chickko.api.Models
         public TimeOnly TimeClockIn { get; set; }
         public TimeOnly TimeClockOut { get; set; }
         public string ClockInLocation { get; set; } = "";
-        public int TotalWirkTime { get; set; }
+        public int TotalWorkTime { get; set; }
         public int wage { get; set; } = 0!;
         public int bonus { get; set; } = 0;
         public int Price { get; set; } = 0;

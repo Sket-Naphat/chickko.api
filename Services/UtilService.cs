@@ -8,10 +8,11 @@ namespace chickko.api.Services
     {
         private FirestoreDb GetFirestoreDb()
         {
-            Environment.SetEnvironmentVariable(
-                "GOOGLE_APPLICATION_CREDENTIALS",
-                Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
-            );
+            //local
+            // Environment.SetEnvironmentVariable(
+            //     "GOOGLE_APPLICATION_CREDENTIALS",
+            //     Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
+            // );
 
             return FirestoreDb.Create("chickkoapp");
         }
@@ -67,11 +68,11 @@ namespace chickko.api.Services
 
             return await query.GetSnapshotAsync();
         }
-        public async Task<QuerySnapshot> GetSnapshotFromFirestoreWithDateLessThan(
+        public async Task<QuerySnapshot> GetSnapshotFromFirestoreWithDateGreaterThan(
            string collectionName,
            string? orderByField = null,
            string? whereField = null,
-           string? dateTo = null)
+           string? datefrom = null)
         {
             // สร้าง instance ของ Firestore
             var db = GetFirestoreDb();
@@ -84,8 +85,8 @@ namespace chickko.api.Services
                 query = query.OrderBy(orderByField);
 
             // ถ้ามีการระบุ whereField และ dateTo ให้กรองข้อมูลที่ whereField < dateTo
-            if (!string.IsNullOrEmpty(whereField) && !string.IsNullOrEmpty(dateTo))
-                query = query.WhereGreaterThan(whereField, dateTo);
+            if (!string.IsNullOrEmpty(whereField) && !string.IsNullOrEmpty(datefrom))
+                query = query.WhereGreaterThan(whereField, datefrom);
 
             // ดึง snapshot จาก query ที่สร้าง
             return await query.GetSnapshotAsync();
