@@ -70,7 +70,7 @@ public class OrdersService : IOrdersService
                 var _customerName = data["customerName"]?.ToString()?.Replace("'", "''"); // escape ' ด้วย
 
                 var sql = $@"
-                    SELECT ""OrderId"" FROM ""OrderHeaders"" 
+                    SELECT * FROM ""OrderHeaders"" 
                     WHERE ""OrderDate"" = '{_orderDate}' 
                     AND ""OrderTime"" = '{_orderTime}' 
                     AND ""CustomerName"" = '{_customerName}'";
