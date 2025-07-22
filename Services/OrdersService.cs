@@ -70,7 +70,7 @@ public class OrdersService : IOrdersService
                 var _customerName = data["customerName"]?.ToString()?.Replace("'", "''"); // escape ' ด้วย
 
                 var sql = $@"
-                    SELECT * FROM ""OrderHeaders"" 
+                    SELECT ""OrderId"" FROM ""OrderHeaders"" 
                     WHERE ""OrderDate"" = '{_orderDate}' 
                     AND ""OrderTime"" = '{_orderTime}' 
                     AND ""CustomerName"" = '{_customerName}'";
@@ -230,24 +230,7 @@ public class OrdersService : IOrdersService
             return "❌ เกิดข้อผิดพลาด กรุณาตรวจสอบ " + ex.Message + " เพิ่มเติม";
         }
     }
-    public class ImportOrderExcel
-    {
-        public string? menu_name { get; set; }
-        public string? customer_name { get; set; }
-        public string? order_date { get; set; }
-        public string? order_time { get; set; }
-        public string? finish_order_time { get; set; }
-        public string? discharge_time { get; set; }
-        public string? discharge_type { get; set; }
-        public string? price { get; set; }
-        public string? promptpay_price { get; set; }
-        public string? cash_price { get; set; }
-        public string? unit_price { get; set; }
-        public string? qty { get; set; }
-        public string? cost { get; set; }
-        public string? unit_cost { get; set; }
-        public string? profit { get; set; }
-    }
+   
     public async Task<string> ImportOrderFromExcel()
     {
         int copied = 0;

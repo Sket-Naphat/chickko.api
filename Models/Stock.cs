@@ -48,4 +48,26 @@ namespace chickko.api.Models
         public string Description { get; set; } = string.Empty;
         public bool Active { get; set; }
     }
+
+    public class StockCategory
+    {
+        [Key]
+        public int StockCategoryID { get; set; }
+        public string StockCategoryName { get; set; } = ""!;
+        public string Description { get; set; } = "";
+    }
+    public class StockUnitType
+    {
+        [Key]
+        public int StockUnitTypeID { get; set; }
+        public string StockUnitTypeName { get; set; } = ""!;
+        public string Description { get; set; } = "";
+    }
+    public class StockLocation
+    {
+        [Key]
+        public int StockLocationID { get; set; }
+        public string StockLocationName { get; set; } = ""!;
+        public string Description { get; set; } = "";
+    }
 }

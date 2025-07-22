@@ -113,7 +113,7 @@ namespace chickko.api.Models
         public string OrderDateFrom { get; set; } = string.Empty;
         public string OrderDateTo { get; set; } = string.Empty;
     }
-   public class OrderDetailTopping
+    public class OrderDetailTopping
     {
         public int OrderDetailToppingId { get; set; }
 
@@ -127,5 +127,22 @@ namespace chickko.api.Models
 
         public decimal ToppingPrice { get; set; } = 0;
     }
-
+    public class ImportOrderExcel
+    {
+        public string? menu_name { get; set; }
+        public string? customer_name { get; set; }
+        public string? order_date { get; set; }
+        public string? order_time { get; set; }
+        public string? finish_order_time { get; set; }
+        public string? discharge_time { get; set; }
+        public string? discharge_type { get; set; }
+        public string? price { get; set; }
+        public string? promptpay_price { get; set; }
+        public string? cash_price { get; set; }
+        public string? unit_price { get; set; }
+        public string? qty { get; set; }
+        public string? cost { get; set; }
+        public string? unit_cost { get; set; }
+        public string? profit { get; set; }
+    }
 }

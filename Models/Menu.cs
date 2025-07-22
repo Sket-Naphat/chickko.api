@@ -30,4 +30,17 @@ namespace chickko.api.Models
         public Category? Category { get; set; }
         public string MenuIdInFirestore { get; set; } = string.Empty;
     }
+    public class Category
+    {
+        [Key]
+        public int CategoryId { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string CategoryName { get; set; } = null!;
+
+        [MaxLength(255)]
+        public string Description { get; set; } = null!;
+        public string CategoryInFirestore { get; set; } = string.Empty;
+    }
 }
