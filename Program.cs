@@ -48,15 +48,6 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader();
     });
 });
-
-
-var app = builder.Build();
-app.UseCors("AllowAll");
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
 
 if (!string.IsNullOrEmpty(credentialsJson))
@@ -65,6 +56,15 @@ if (!string.IsNullOrEmpty(credentialsJson))
     File.WriteAllText(filePath, credentialsJson);
     Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
 }
+
+var app = builder.Build();
+app.UseCors("AllowAll");
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
 
 app.UseHttpsRedirection();
 
