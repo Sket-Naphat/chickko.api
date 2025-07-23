@@ -23,7 +23,7 @@ namespace chickko.api.Data
         public DbSet<Table> Tables { get; set; } = null!;
         public DbSet<OrderDetailTopping> OrderDetailToppings { get; set; } = null!;
         public DbSet<ImportOrderExcel> ImportOrdersExcel { get; set; } = null!;
-        public DbSet<ErrorLog> ErrorLog { get; set; } = null!;
+        public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<Cost> Cost { get; set; } = null!;
         public DbSet<CostCategory> CostCategory { get; set; } = null!;
         public DbSet<WorkTime> WorkTime { get; set; } = null!;
@@ -33,6 +33,7 @@ namespace chickko.api.Data
         public DbSet<StockCategory> StockCategory { get; set; } = null!;
         public DbSet<StockUnitType> StockUnitType { get; set; } = null!;
         public DbSet<StockLocation> StockLocation { get; set; } = null!;
+        public DbSet<StockLogType> StockLogType { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

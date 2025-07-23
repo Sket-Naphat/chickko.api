@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250723061820_AddRecentStockLogFix")]
+    partial class AddRecentStockLogFix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -566,6 +569,9 @@ namespace chickko.api.Migrations
                     b.Property<int>("RequiredQTY")
                         .HasColumnType("integer");
 
+                    b.Property<int>("StockCategoryID")
+                        .HasColumnType("integer");
+
                     b.Property<int>("StockId")
                         .HasColumnType("integer");
 
@@ -578,7 +584,13 @@ namespace chickko.api.Migrations
                     b.Property<TimeOnly>("StockInTime")
                         .HasColumnType("time without time zone");
 
+                    b.Property<int>("StockLocationID")
+                        .HasColumnType("integer");
+
                     b.Property<int>("StockLogTypeID")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StockUnitTypeID")
                         .HasColumnType("integer");
 
                     b.Property<int?>("SupplierSupplyId")
@@ -592,7 +604,13 @@ namespace chickko.api.Migrations
 
                     b.HasKey("StockLogId");
 
+                    b.HasIndex("StockCategoryID");
+
+                    b.HasIndex("StockLocationID");
+
                     b.HasIndex("StockLogTypeID");
+
+                    b.HasIndex("StockUnitTypeID");
 
                     b.HasIndex("SupplierSupplyId");
 
@@ -606,10 +624,6 @@ namespace chickko.api.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StockLogTypeID"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("StockLogTypeName")
                         .IsRequired()
@@ -910,9 +924,27 @@ namespace chickko.api.Migrations
 
             modelBuilder.Entity("chickko.api.Models.StockLog", b =>
                 {
+                    b.HasOne("chickko.api.Models.StockCategory", "StockCategory")
+                        .WithMany()
+                        .HasForeignKey("StockCategoryID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("chickko.api.Models.StockLocation", "StockLocation")
+                        .WithMany()
+                        .HasForeignKey("StockLocationID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("chickko.api.Models.StockLogType", "StockLogType")
                         .WithMany()
                         .HasForeignKey("StockLogTypeID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("chickko.api.Models.StockUnitType", "StockUnitType")
+                        .WithMany()
+                        .HasForeignKey("StockUnitTypeID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -920,7 +952,13 @@ namespace chickko.api.Migrations
                         .WithMany()
                         .HasForeignKey("SupplierSupplyId");
 
+                    b.Navigation("StockCategory");
+
+                    b.Navigation("StockLocation");
+
                     b.Navigation("StockLogType");
+
+                    b.Navigation("StockUnitType");
 
                     b.Navigation("Supplier");
                 });

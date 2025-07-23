@@ -16,6 +16,7 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrdersService, OrdersService>();
 builder.Services.AddScoped<IUtilService, UtilService>(); // เพิ่ม IUtilService
+builder.Services.AddScoped<IStockService, StockService>();
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication("Bearer")
