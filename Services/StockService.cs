@@ -31,9 +31,12 @@ namespace chickko.api.Services
                 {
                     StockId = s.StockId,
                     ItemName = s.ItemName,
-                    CategoryName = s.StockCategory?.StockCategoryName ?? "",
-                    UnitTypeName = s.StockUnitType?.StockUnitTypeName ?? "",
-                    LocationName = s.StockLocation?.StockLocationName ?? "",
+                    StockCategoryID = s.StockCategoryID,
+                    StockCategoryName = s.StockCategory!.StockCategoryName ,
+                    StockUnitTypeID = s.StockUnitTypeID,
+                    StockUnitTypeName = s.StockUnitType!.StockUnitTypeName ,
+                    StockLocationID = s.StockLocationID,
+                    StockLocationName = s.StockLocation!.StockLocationName ,
                     TotalQTY = s.TotalQTY,
                     RequiredQTY = s.RequiredQTY,
                     StockInQTY = s.StockInQTY,
@@ -159,6 +162,25 @@ namespace chickko.api.Services
 
             // 6. บันทึกการอัปเดต Stock
             await _context.SaveChangesAsync();
+        }
+        public async Task UpdateStockDetail(StockDto stockDto)
+        {
+            try
+            {
+                var stock = await _context.Stocks.FindAsync(stockDto.StockId)
+                ?? throw new Exception($"ไม่พบ Stock ID: {stockDto.StockId}");
+
+                stock.ItemName = stockDto.ItemName;
+                stock.StockLocationID = stockDto.StockLocationID;
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+                Console.WriteLine("Inner: " + ex.InnerException?.Message);
+                throw; // หรือจะ return BadRequest ก็ได้
+            }
         }
     }
 }

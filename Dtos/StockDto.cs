@@ -6,15 +6,18 @@ namespace chickko.api.Dtos
     {
         public int StockId { get; set; }
         public string ItemName { get; set; } = string.Empty;
-        public string CategoryName { get; set; } = string.Empty;
-        public string UnitTypeName { get; set; } = string.Empty;
-        public string LocationName { get; set; } = string.Empty;
+        public int StockCategoryID { get; set; }
+        public string StockCategoryName { get; set; } = string.Empty;
+        public int StockUnitTypeID { get; set; } 
+        public string StockUnitTypeName { get; set; } = string.Empty;        
+        public int StockLocationID { get; set; }
+        public string StockLocationName { get; set; } = string.Empty;  
         public int TotalQTY { get; set; }
         public int RequiredQTY { get; set; }
         public int StockInQTY { get; set; }
-        public string UpdateDate { get; set; } = "";
-        public string UpdateTime { get; set; } = "";
-        public string Remark { get; set; } = "";
+        public string UpdateDate { get; set; } = string.Empty;  
+        public string UpdateTime { get; set; } = string.Empty;  
+        public string Remark { get; set; } = string.Empty;  
     }
     public class StockCountDto
     {

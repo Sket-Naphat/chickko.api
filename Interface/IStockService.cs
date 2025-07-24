@@ -7,5 +7,6 @@ namespace chickko.api.Interface
         Task<List<StockDto>> GetCurrentStock();
         Task CreateStockCountLog(StockCountDto stockCountDto);
         Task CreateStocInLog(StockInDto stockInDto);
+        Task UpdateStockDetail(StockDto stockDto);
     }
 }
