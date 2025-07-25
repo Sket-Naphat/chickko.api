@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250725073708_AddUserpermissionMore2")]
+    partial class AddUserpermissionMore2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -765,13 +768,13 @@ namespace chickko.api.Migrations
                     b.ToTable("UserPermistion");
                 });
 
-            modelBuilder.Entity("chickko.api.Models.Worktime", b =>
+            modelBuilder.Entity("chickko.api.Models.WorkTime", b =>
                 {
-                    b.Property<int>("WorktimeID")
+                    b.Property<int>("WorkTimeID")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("WorktimeID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("WorkTimeID"));
 
                     b.Property<bool>("Active")
                         .HasColumnType("boolean");
@@ -802,7 +805,7 @@ namespace chickko.api.Migrations
                     b.Property<TimeOnly?>("TimeClockOut")
                         .HasColumnType("time without time zone");
 
-                    b.Property<double>("TotalWorktime")
+                    b.Property<double>("TotalWorkTime")
                         .HasColumnType("double precision");
 
                     b.Property<DateOnly>("UpdateDate")
@@ -817,11 +820,11 @@ namespace chickko.api.Migrations
                     b.Property<DateOnly>("WorkDate")
                         .HasColumnType("date");
 
-                    b.HasKey("WorktimeID");
+                    b.HasKey("WorkTimeID");
 
                     b.HasIndex("EmployeeID");
 
-                    b.ToTable("Worktime");
+                    b.ToTable("WorkTime");
                 });
 
             modelBuilder.Entity("chickko.api.Models.Cost", b =>
@@ -976,7 +979,7 @@ namespace chickko.api.Migrations
                     b.Navigation("UserPermistion");
                 });
 
-            modelBuilder.Entity("chickko.api.Models.Worktime", b =>
+            modelBuilder.Entity("chickko.api.Models.WorkTime", b =>
                 {
                     b.HasOne("chickko.api.Models.User", "Employee")
                         .WithMany()

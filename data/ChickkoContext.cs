@@ -12,6 +12,7 @@ namespace chickko.api.Data
 
         public DbSet<Menu> Menus { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
+         public DbSet<UserPermistion> UserPermistion { get; set; } = null!;
         public DbSet<OrderHeader> OrderHeaders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<Ordertype> Ordertypes { get; set; }
@@ -26,7 +27,7 @@ namespace chickko.api.Data
         public DbSet<ErrorLog> ErrorLogs { get; set; }
         public DbSet<Cost> Cost { get; set; } = null!;
         public DbSet<CostCategory> CostCategory { get; set; } = null!;
-        public DbSet<WorkTime> WorkTime { get; set; } = null!;
+        public DbSet<Worktime> Worktime { get; set; } = null!;
         public DbSet<Stock> Stock { get; set; } = null!;
         public DbSet<StockLog> StockLog { get; set; } = null!;
         public DbSet<Supplier> Supplier { get; set; } = null!;

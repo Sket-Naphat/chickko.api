@@ -1,12 +1,14 @@
 using chickko.api.Dtos;
 using chickko.api.Interface;
 using chickko.api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace chickko.api.controller
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // เพิ่มการตรวจสอบสิทธิ์
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;

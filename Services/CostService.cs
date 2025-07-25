@@ -1,4 +1,5 @@
 using chickko.api.Data;
+using chickko.api.Dtos;
 using chickko.api.Interface;
 
 namespace chickko.api.Services
@@ -13,5 +14,9 @@ namespace chickko.api.Services
             _logger = logger;
         }
 
+        public Task<string> addNewCost(CostDto costDto)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

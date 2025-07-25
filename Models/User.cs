@@ -15,8 +15,18 @@ namespace chickko.api.Models
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow; // วันที่แก้ไขล่าสุด
         public bool IsActive { get; set; } = false; // สถานะการใช้งานของผู้ใช้ 
         public string Contact { get; set; } = "";
+        public int UserPermistionID { get; set; } = 3;
+        public UserPermistion? UserPermistion { get; set; } = null;
     }
-
+    public class UserPermistion
+    {
+        [Key]
+        public int UserPermistionID { get; set; }
+        public string UserPermistionName { get; set; } = ""!;
+        public string Description { get; set; } = "";
+        public double WageCost { get; set; } = 50;
+        
+    }
     public class RegisterRequest
     {
         [Required(ErrorMessage = "Username is required")]
@@ -35,4 +45,5 @@ namespace chickko.api.Models
         [Required(ErrorMessage = "Start Work Date is required")]
         public DateTime StartWorkDate { get; set; } = DateTime.UtcNow;
     }
+
 }
