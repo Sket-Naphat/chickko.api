@@ -16,12 +16,12 @@ namespace chickko.api.controller
             _costService = costService;
         }
         //new cost
-        [HttpPost("AddNewCost")]
-        public async Task<IActionResult> AddNewCost(CostDto costDto)
+        [HttpPost("GetStockCostList")]
+        public async Task<IActionResult> GetStockCostList(CostDto costDto)
         {
             try
             {
-                var result = await _costService.addNewCost(costDto);
+                var result = await _costService.GetStockCostList(costDto);
                 return Ok(result);
             }
             catch (Exception ex)

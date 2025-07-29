@@ -57,7 +57,7 @@ namespace chickko.api.Services
             }
         }
 
-        public async Task CreateStockCountLog(StockCountDto stockCountDto)
+        public async Task<StockLog> CreateStockCountLog(StockCountDto stockCountDto)
         {
             try
             {
@@ -68,7 +68,7 @@ namespace chickko.api.Services
                 //var date = DateOnly.Parse(stockCountDto.StockInDate);
                 var date = DateOnly.TryParseExact(stockCountDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
                 var time = TimeOnly.Parse(stockCountDto.StockInTime);
-                int RequiredQTY = stock.RequiredQTY;
+                int RequiredQTY = stock.RequiredQTY;//ตรวจสอบก่อนว่ามี
                 if ((RequiredQTY != stockCountDto.RequiredQTY) && stockCountDto.RequiredQTY != null && stockCountDto.RequiredQTY != 0)
                 {
                     RequiredQTY = stockCountDto.RequiredQTY.Value;
@@ -100,12 +100,13 @@ namespace chickko.api.Services
 
                 // 5. อัปเดตข้อมูลใน Stock หลักให้ตรงกับยอดคงเหลือใหม่
                 stock.TotalQTY = stockCountDto.TotalQTY;
-                stock.UpdateDate = date;
-                stock.UpdateTime = time;
+                stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
                 stock.RecentStockLogId = stockLog.StockLogId;
 
                 // 6. บันทึกการอัปเดต Stock
                 await _context.SaveChangesAsync();
+                return stockLog;
             }
             catch (Exception ex)
             {

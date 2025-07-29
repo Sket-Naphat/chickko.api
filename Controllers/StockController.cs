@@ -12,9 +12,11 @@ namespace chickko.api.controller
     public class StockController : ControllerBase
     {
         private readonly IStockService _stockService;
-        public StockController(IStockService stockService)
+        private readonly ICostService _costService;
+        public StockController(IStockService stockService, ICostService costService)
         {
             _stockService = stockService;
+            _costService = costService;
         }
         [HttpGet("GetCurrentStock")]
         public async Task<IActionResult> GetCurrentStock()
@@ -35,12 +37,13 @@ namespace chickko.api.controller
         {
             var successList = new List<int>();
             var failedList = new List<object>();
+            var _stockLog = new StockLog();
 
             foreach (var stock in stockCountDto)
             {
                 try
                 {
-                    await _stockService.CreateStockCountLog(stock);
+                    _stockLog = await _stockService.CreateStockCountLog(stock);
                     successList.Add(stock.StockId);
                 }
                 catch (Exception ex)
@@ -51,6 +54,21 @@ namespace chickko.api.controller
                         Error = ex.Message
                     });
                 }
+            }
+            //create cost Status
+            if (successList.Count > 0) {
+                var addCost = new Cost
+                {
+                    CostCategoryID = 1,
+                    CostPrice = 0,
+                    CostDate = _stockLog.StockInDate,
+                    CostTime = _stockLog.StockInTime,
+                    UpdateDate =DateOnly.FromDateTime(DateTime.Now),
+                    UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
+                    IsPurchese = false,
+                    CostStatusID = 1,
+                };
+                await _costService.CreateCost(addCost);
             }
 
             return Ok(new

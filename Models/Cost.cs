@@ -16,7 +16,9 @@ namespace chickko.api.Models
         public TimeOnly CostTime { get; set; }
         public DateOnly UpdateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
         public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
-        public bool isFinish { get; set; } = false; //ใชเพื่อบันทึกกรณีที่ยังไม่กดบันทึกแค่กรอกไว้เฉยๆ ให้เก็บค่าที่เคยกรอกไว้ไปแสดง
+        public bool IsPurchese { get; set; } = false; //ใชเพื่อบันทึกกรณีที่ยังไม่กดบันทึกแค่กรอกไว้เฉยๆ ให้เก็บค่าที่เคยกรอกไว้ไปแสดง
+        public int? CostStatusID { get; set; }
+        public CostStatus? CostStatus { get; set; }
     }
 
     public class CostCategory
@@ -25,5 +27,12 @@ namespace chickko.api.Models
         public int CostCategoryID { get; set; }
         public string CostCategoryName { get; set; } = string.Empty!;
         public string? Description { get; set; }
+    }
+    public class CostStatus
+    {
+        [Key]
+        public int CostStatusID { get; set; }
+        public string CostStatusName { get; set; } = ""!;
+        public string Description { get; set; } = "";
     }
 }
