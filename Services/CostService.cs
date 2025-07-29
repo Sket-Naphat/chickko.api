@@ -16,21 +16,31 @@ namespace chickko.api.Services
             _context = context;
             _logger = logger;
         }
-        [HttpPost()]
-        public async Task<List<StockDto>> GetStockCostList(CostDto costDto)
+        public async Task<List<StockDto>> GetStockCostList(CostDto costDto) //http://localhost:5036/api/stock/GetStockCostList
         {
             try
             {
                 //หาก่อนว่าในวันนี้มีรายการที่ต้องสั่งซื้อมั้ย
-                var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchese).ToListAsync();
+                //var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchese).ToListAsync();
+
+                var query = _context.Cost.Where(c => !c.IsPurchese);
+
+                if (costDto is { CostDate: not null and var date } && date != default)
+                {
+                    query = query.Where(c => c.CostDate == date);
+                }
+
+                var _cost = await query.ToListAsync();
+
                 var StockDto = new List<StockDto>();
-                if (_cost != null)
+                if (_cost != null && _cost.Count > 0)
                 {
                     //ถ้ามีที่ยังไม่จ่ายเงินทีให้ทำการ get stock และราคา
                     var _stock = await _context.Stock
                                 .Include(s => s.StockCategory)
                                 .Include(s => s.StockUnitType)
                                 .Include(s => s.StockLocation)
+                                .Where(s => s.Active == true && s.StockInQTY > 0)
                                 .ToListAsync();
 
                     foreach (var stock in _stock)
@@ -48,7 +58,8 @@ namespace chickko.api.Services
                             TotalQTY = stock.TotalQTY,
                             RequiredQTY = stock.RequiredQTY,
                             StockInQTY = stock.StockInQTY,
-                            Remark = stock.Remark
+                            Remark = stock.Remark,
+                            RecentStockLogId = stock.RecentStockLogId
                         };
                         StockDto.Add(_stockDto);
                     }
@@ -67,6 +78,94 @@ namespace chickko.api.Services
             {
                 _context.Cost.Add(_Cost);
                 await _context.SaveChangesAsync();
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "EF Core SaveChanges Error: {Message}", ex.InnerException?.Message ?? ex.Message);
+                throw;
+            }
+        }
+
+        public async Task<Cost> CreateCostReturnCostID(Cost cost)
+        {
+            _context.Cost.Add(cost);
+            await _context.SaveChangesAsync();
+            return cost;
+        }
+
+        public async Task UpdateStockCost(UpdateStockCostDto updateStockCostDto)
+        {
+            try
+            {
+                //get cost by id
+                // var _cost = await _context.Cost.Where(c => c.CostId == updateStockCostDto.CostDto.CostID).ToListAsync();
+                var _cost = await _context.Cost
+                                    .Include(c => c.CostCategory)
+                                    .Include(c => c.CostStatus)
+                                    .FirstOrDefaultAsync(c => c.CostId == updateStockCostDto.CostDto.CostID);
+                if (_cost != null)
+                {
+                    bool IsPurchese = updateStockCostDto.CostDto.IsPurchese;
+                    _cost.CostPrice = updateStockCostDto.CostDto.CostPrice;
+                    _cost.CostDescription = updateStockCostDto.CostDto.CostDescription;
+
+
+                    if (IsPurchese)
+                    {
+                        _cost.IsPurchese = IsPurchese;
+                        _cost.PurcheseDate = DateOnly.FromDateTime(System.DateTime.Now);
+                        _cost.PurcheseTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                        _cost.CostStatusID = 3; //จ่ายเงินแล้ว
+                    }
+                    else
+                    {
+                        _cost.CostStatusID = 2; //ยังไม่จ่าย
+                    }
+
+                    _cost.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                    _cost.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+
+                    if (updateStockCostDto.StockDto != null)
+                    {
+                        foreach (var StockDto in updateStockCostDto.StockDto)
+                        {
+                            //ค้นหารายการแต่ละ item แล้ว loop add ค่า
+                            var _stock = await _context.Stock
+                                            .FirstOrDefaultAsync(s => s.StockId == StockDto.StockId);
+
+                            if (_stock != null)
+                            {
+                                _stock.TotalQTY = StockDto.TotalQTY + StockDto.PurcheseQTY; //จำนวนคงเหลือ
+                                _stock.Remark = StockDto.Remark;
+                                int StockInQTY = StockDto.StockInQTY - StockDto.PurcheseQTY;//หาจำนวนที่ขาด (ที่ต้องซื้อเพิ่ม)
+                                StockInQTY = (StockInQTY < 0) ? 0 : StockInQTY;
+                                _stock.StockInQTY = StockInQTY;
+                                _stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                                _stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+
+                                if (StockDto.RecentStockLogId != null)
+                                {
+                                    var _stockLog = await _context.StockLog
+                                                         .FirstOrDefaultAsync(s => s.StockLogId == StockDto.RecentStockLogId);
+
+                                    if (_stockLog != null)
+                                    {
+                                        _stockLog.SupplyID = StockDto.SupplyId;
+                                        _stockLog.PurcheseQTY = StockDto.PurcheseQTY;
+                                        _stockLog.DipQTY = StockDto.PurcheseQTY - StockDto.StockInQTY;
+                                        _stockLog.IsPurchese = IsPurchese;
+                                        _stockLog.Price = StockDto.Price;
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+
 
             }
             catch (Exception ex)

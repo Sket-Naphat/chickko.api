@@ -2,6 +2,7 @@ using chickko.api.Data;
 using Microsoft.EntityFrameworkCore;
 using chickko.api.Services;
 using chickko.api.Interface;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,10 @@ if (!string.IsNullOrEmpty(credentialsJson))
     File.WriteAllText(filePath, credentialsJson);
     Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
 }
+CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
+
+
 var app = builder.Build();
 app.UseCors("AllowAll");
 if (app.Environment.IsDevelopment())

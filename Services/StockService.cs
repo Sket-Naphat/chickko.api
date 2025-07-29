@@ -24,7 +24,7 @@ namespace chickko.api.Services
                     .Include(s => s.StockCategory)
                     .Include(s => s.StockUnitType)
                     .Include(s => s.StockLocation)
-                    .Where(s => s.Active == true)
+                    .Where(s => s.Active == true )
                     .ToListAsync();
 
                 var stockDtos = stocks.Select(s => new StockDto
@@ -41,7 +41,7 @@ namespace chickko.api.Services
                     RequiredQTY = s.RequiredQTY,
                     StockInQTY = s.StockInQTY,
                     UpdateDate = s.UpdateDate.ToString("yyyy-MM-dd"),
-                    UpdateTime = s.UpdateTime.ToString("HH:mm"),
+                    UpdateTime = s.UpdateTime.ToString("HH:mm:ss"),
                     Remark = s.Remark
                 }).ToList();
 
@@ -57,7 +57,7 @@ namespace chickko.api.Services
             }
         }
 
-        public async Task<StockLog> CreateStockCountLog(StockCountDto stockCountDto)
+        public async Task<StockLog> CreateStockCountLog(StockCountDto stockCountDto, int costId)
         {
             try
             {
@@ -72,6 +72,7 @@ namespace chickko.api.Services
                 if ((RequiredQTY != stockCountDto.RequiredQTY) && stockCountDto.RequiredQTY != null && stockCountDto.RequiredQTY != 0)
                 {
                     RequiredQTY = stockCountDto.RequiredQTY.Value;
+                    stock.StockInQTY = RequiredQTY;
                 }
                 int StockInQTY = RequiredQTY - stockCountDto.TotalQTY;
                 StockInQTY = (StockInQTY < 0) ? 0 : StockInQTY;
@@ -91,7 +92,8 @@ namespace chickko.api.Services
                     RequiredQTY = RequiredQTY, //จนวนที่ต้องใช้
                     StockInQTY = StockInQTY, //จำนวนที่ต้องซื้อ
                     StockLogTypeID = 1, // 1 = Count (ขานับ)
-                    Remark = stockCountDto.Remark
+                    Remark = stockCountDto.Remark,
+                    CostId = costId
                 };
 
                 // 4. บันทึก StockLog ลงฐานข้อมูล
@@ -100,6 +102,7 @@ namespace chickko.api.Services
 
                 // 5. อัปเดตข้อมูลใน Stock หลักให้ตรงกับยอดคงเหลือใหม่
                 stock.TotalQTY = stockCountDto.TotalQTY;
+                stock.StockInQTY = StockInQTY;
                 stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
                 stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
                 stock.RecentStockLogId = stockLog.StockLogId;
@@ -142,7 +145,7 @@ namespace chickko.api.Services
                 PurcheseQTY = stockInDto.PurcheseQTY,
                 DipQTY = DipQTY,
                 Price = stockInDto.Price,
-                SupplyId = stockInDto.SupplyId,
+                SupplyID = stockInDto.SupplyId,
                 RequiredQTY = stock.RequiredQTY, // จำนวนที่ต้องการ
                 TotalQTY = stock.TotalQTY + stockInDto.PurcheseQTY, // คำนวณยอดคงเหลือใหม่
                 StockLogTypeID = 2, // 2 = Purchase (ซื้อเข้า)

@@ -45,16 +45,18 @@ namespace chickko.api.Models
         public int DipQTY { get; set; } = 0;//จำนวนที่มันดิปกันอยู่ PurcheseQTY - StockInQTY
         public int Price { get; set; } = 0;//ราคาที่ซื้อ
         public bool IsPurchese { get; set; } = false;
-        public int SupplyId { get; set; } = 0;
+        public int SupplyID { get; set; } = 0;
         public Supplier? Supplier { get; set; } = null;
         public string Remark { get; set; } = string.Empty;
         public int StockLogTypeID { get; set; } // 1 = Count, 2 = Purchase
         public StockLogType? StockLogType { get; set; }
+        public int CostId { get; set; }
+        public Cost? Cost { get; set; } = null;
     }
     public class Supplier
     {
         [Key]
-        public int SupplyId { get; set; }
+        public int SupplyID { get; set; }
         public string SupplyName { get; set; } = string.Empty;
         public string SupplyContact { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;

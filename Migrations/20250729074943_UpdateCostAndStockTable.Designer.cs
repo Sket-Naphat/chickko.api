@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250729074943_UpdateCostAndStockTable")]
+    partial class UpdateCostAndStockTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -579,9 +582,6 @@ namespace chickko.api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StockLogId"));
 
-                    b.Property<int>("CostId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("DipQTY")
                         .HasColumnType("integer");
 
@@ -626,8 +626,6 @@ namespace chickko.api.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("StockLogId");
-
-                    b.HasIndex("CostId");
 
                     b.HasIndex("StockLogTypeID");
 
@@ -993,12 +991,6 @@ namespace chickko.api.Migrations
 
             modelBuilder.Entity("chickko.api.Models.StockLog", b =>
                 {
-                    b.HasOne("chickko.api.Models.Cost", "Cost")
-                        .WithMany()
-                        .HasForeignKey("CostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("chickko.api.Models.StockLogType", "StockLogType")
                         .WithMany()
                         .HasForeignKey("StockLogTypeID")
@@ -1008,8 +1000,6 @@ namespace chickko.api.Migrations
                     b.HasOne("chickko.api.Models.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierSupplyID");
-
-                    b.Navigation("Cost");
 
                     b.Navigation("StockLogType");
 

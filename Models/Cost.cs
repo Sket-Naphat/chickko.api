@@ -17,6 +17,8 @@ namespace chickko.api.Models
         public DateOnly UpdateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
         public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
         public bool IsPurchese { get; set; } = false; //ใชเพื่อบันทึกกรณีที่ยังไม่กดบันทึกแค่กรอกไว้เฉยๆ ให้เก็บค่าที่เคยกรอกไว้ไปแสดง
+        public DateOnly PurcheseDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
+        public TimeOnly PurcheseTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
         public int? CostStatusID { get; set; }
         public CostStatus? CostStatus { get; set; }
     }

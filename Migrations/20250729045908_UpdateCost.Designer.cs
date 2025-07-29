@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250729045908_UpdateCost")]
+    partial class UpdateCost
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -78,12 +81,6 @@ namespace chickko.api.Migrations
 
                     b.Property<bool>("IsPurchese")
                         .HasColumnType("boolean");
-
-                    b.Property<DateOnly>("PurcheseDate")
-                        .HasColumnType("date");
-
-                    b.Property<TimeOnly>("PurcheseTime")
-                        .HasColumnType("time without time zone");
 
                     b.Property<DateOnly>("UpdateDate")
                         .HasColumnType("date");
@@ -579,9 +576,6 @@ namespace chickko.api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StockLogId"));
 
-                    b.Property<int>("CostId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("DipQTY")
                         .HasColumnType("integer");
 
@@ -616,10 +610,10 @@ namespace chickko.api.Migrations
                     b.Property<int>("StockLogTypeID")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("SupplierSupplyID")
+                    b.Property<int?>("SupplierSupplyId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("SupplyID")
+                    b.Property<int>("SupplyId")
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalQTY")
@@ -627,11 +621,9 @@ namespace chickko.api.Migrations
 
                     b.HasKey("StockLogId");
 
-                    b.HasIndex("CostId");
-
                     b.HasIndex("StockLogTypeID");
 
-                    b.HasIndex("SupplierSupplyID");
+                    b.HasIndex("SupplierSupplyId");
 
                     b.ToTable("StockLog");
                 });
@@ -680,11 +672,11 @@ namespace chickko.api.Migrations
 
             modelBuilder.Entity("chickko.api.Models.Supplier", b =>
                 {
-                    b.Property<int>("SupplyID")
+                    b.Property<int>("SupplyId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SupplyID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("SupplyId"));
 
                     b.Property<bool>("Active")
                         .HasColumnType("boolean");
@@ -701,7 +693,7 @@ namespace chickko.api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("SupplyID");
+                    b.HasKey("SupplyId");
 
                     b.ToTable("Supplier");
                 });
@@ -993,12 +985,6 @@ namespace chickko.api.Migrations
 
             modelBuilder.Entity("chickko.api.Models.StockLog", b =>
                 {
-                    b.HasOne("chickko.api.Models.Cost", "Cost")
-                        .WithMany()
-                        .HasForeignKey("CostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("chickko.api.Models.StockLogType", "StockLogType")
                         .WithMany()
                         .HasForeignKey("StockLogTypeID")
@@ -1007,9 +993,7 @@ namespace chickko.api.Migrations
 
                     b.HasOne("chickko.api.Models.Supplier", "Supplier")
                         .WithMany()
-                        .HasForeignKey("SupplierSupplyID");
-
-                    b.Navigation("Cost");
+                        .HasForeignKey("SupplierSupplyId");
 
                     b.Navigation("StockLogType");
 

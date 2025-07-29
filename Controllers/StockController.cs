@@ -32,6 +32,57 @@ namespace chickko.api.controller
                 return StatusCode(500, new { message = "เกิดข้อผิดพลาดขณะดึงข้อมูลสต็อก โปรดแจ้งพี่สเก็ต" });
             }
         }
+        #region comment
+        // [HttpPost("CreateStockCount")]
+        // public async Task<IActionResult> CreateStockCount([FromBody] List<StockCountDto> stockCountDto)
+        // {
+        //     var successList = new List<int>();
+        //     var failedList = new List<object>();
+        //     var _stockLog = new StockLog();
+
+        //     foreach (var stock in stockCountDto)
+        //     {
+        //         try
+        //         {
+        //             _stockLog = await _stockService.CreateStockCountLog(stock);
+        //             successList.Add(stock.StockId);
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             failedList.Add(new
+        //             {
+        //                 StockId = stock.StockId,
+        //                 Error = ex.Message
+        //             });
+        //         }
+        //     }
+        //     //create cost Status
+        //     if (successList.Count > 0)
+        //     {
+        //         var addCost = new Cost
+        //         {
+        //             CostCategoryID = 1,
+        //             CostPrice = 0,
+        //             CostDate = _stockLog.StockInDate,
+        //             CostTime = _stockLog.StockInTime,
+        //             UpdateDate = DateOnly.FromDateTime(DateTime.Now),
+        //             UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
+        //             IsPurchese = false,
+        //             CostStatusID = 1,
+        //         };
+        //         await _costService.CreateCost(addCost);
+        //     }
+
+        //     return Ok(new
+        //     {
+        //         message = "ผลลัพธ์การบันทึกข้อมูล",
+        //         successCount = successList.Count,
+        //         failedCount = failedList.Count,
+        //         successStockIds = successList,
+        //         failedItems = failedList
+        //     });
+        // }
+        #endregion
         [HttpPost("CreateStockCount")]
         public async Task<IActionResult> CreateStockCount([FromBody] List<StockCountDto> stockCountDto)
         {
@@ -39,11 +90,29 @@ namespace chickko.api.controller
             var failedList = new List<object>();
             var _stockLog = new StockLog();
 
+            var nowDate = DateOnly.FromDateTime(DateTime.Now);
+            var nowTime = TimeOnly.FromDateTime(DateTime.Now);
+            var addCost = new Cost
+            {
+                CostCategoryID = 1,
+                CostPrice = 0,
+                CostDate = nowDate,
+                CostTime = nowTime,
+                UpdateDate = nowDate,
+                UpdateTime = nowTime,
+                IsPurchese = false,
+                CostStatusID = 1,
+            };
+
+            var createdCost = await _costService.CreateCostReturnCostID(addCost); // ต้อง return ค่า Cost จาก service
+            var createdCostId = createdCost.CostId;
+
             foreach (var stock in stockCountDto)
             {
                 try
                 {
-                    _stockLog = await _stockService.CreateStockCountLog(stock);
+
+                    await _stockService.CreateStockCountLog(stock, createdCostId);
                     successList.Add(stock.StockId);
                 }
                 catch (Exception ex)
@@ -54,21 +123,6 @@ namespace chickko.api.controller
                         Error = ex.Message
                     });
                 }
-            }
-            //create cost Status
-            if (successList.Count > 0) {
-                var addCost = new Cost
-                {
-                    CostCategoryID = 1,
-                    CostPrice = 0,
-                    CostDate = _stockLog.StockInDate,
-                    CostTime = _stockLog.StockInTime,
-                    UpdateDate =DateOnly.FromDateTime(DateTime.Now),
-                    UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
-                    IsPurchese = false,
-                    CostStatusID = 1,
-                };
-                await _costService.CreateCost(addCost);
             }
 
             return Ok(new
