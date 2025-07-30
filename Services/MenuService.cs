@@ -1,6 +1,7 @@
 using chickko.api.Data;
 using chickko.api.Interface;
 using chickko.api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace chickko.api.Services
 {
@@ -73,13 +74,13 @@ namespace chickko.api.Services
             try
             {
                 //ดึงข้อมูลจาก Firestore
-                 var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu","category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
+                var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu", "category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
                 if (snapshot.Documents.Count == 0)
                 {
                     return "ไม่มีเมนูใน Firestore ที่จะคัดลอก";
                 }
                 int copied = 0;
-
+                int UpdateValue = 0;
                 // 2. Map ข้อมูลหลักจาก Firestore
                 foreach (var doc in snapshot.Documents)
                 {
@@ -89,27 +90,43 @@ namespace chickko.api.Services
                     var categoryName = data["category"]?.ToString() ?? "";
                     Category _Category = _context.Categories.First(x => x.CategoryInFirestore == categoryName);
 
-                    var menu = new Menu
-                    {
-                        MenuIdInFirestore = doc.Id, // ใช้ ID ของ Firestore
-                        Name = data["name"]?.ToString() ?? "",
-                        Price = Convert.ToDecimal(data["price"]),
-                        Cost = Convert.ToDecimal(data["cost"]),
-                        ImageUrl = data["imgPath"]?.ToString() ?? "",
-                        Active = Convert.ToBoolean(data["active"]),
-                        IsTopping = Convert.ToBoolean(data["addTopping"]),
-                        CategoryId = _Category.CategoryId,
-                        Category = _Category
-                    };
+                    var existingOrder = await _context.Menus.FirstOrDefaultAsync(m => m.MenuIdInFirestore == doc.Id);
 
-                    // 3. บันทึก OrderHeader ก่อน เพื่อให้ได้ OrderId
-                    _context.Menus.Add(menu);
-                    await _context.SaveChangesAsync();
-                    copied++;
-                    Console.WriteLine($"คัดลอกเมนู: {menu.Name} (ID: {menu.MenuIdInFirestore})");
+                    if (existingOrder != null)
+                    {
+                        existingOrder.Name = data["name"]?.ToString() ?? "";
+                        existingOrder.Price = Convert.ToDecimal(data["price"]);
+                        existingOrder.Cost = Convert.ToDecimal(data["cost"]);
+                        existingOrder.ImageUrl = data["imgPath"]?.ToString() ?? "";
+                        existingOrder.Active = Convert.ToBoolean(data["active"]);
+                        existingOrder.IsTopping = Convert.ToBoolean(data["addTopping"]);
+                        existingOrder.CategoryId = _Category.CategoryId;
+                        existingOrder.Category = _Category;
+                        await _context.SaveChangesAsync();
+                        UpdateValue++;
+                    }
+                    else
+                    {
+                        var menu = new Menu
+                        {
+                            MenuIdInFirestore = doc.Id, // ใช้ ID ของ Firestore
+                            Name = data["name"]?.ToString() ?? "",
+                            Price = Convert.ToDecimal(data["price"]),
+                            Cost = Convert.ToDecimal(data["cost"]),
+                            ImageUrl = data["imgPath"]?.ToString() ?? "",
+                            Active = Convert.ToBoolean(data["active"]),
+                            IsTopping = Convert.ToBoolean(data["addTopping"]),
+                            CategoryId = _Category.CategoryId,
+                            Category = _Category
+                        };
+                        _context.Menus.Add(menu);
+                        await _context.SaveChangesAsync();
+                        copied++;
+                        Console.WriteLine($"คัดลอกเมนู: {menu.Name} (ID: {menu.MenuIdInFirestore})");
+                    }
                 }
-                
-                return $"คัดลอก เมนู จาก Firestore มา {copied} รายการเรียบร้อยแล้ว";
+
+                return $"คัดลอก เมนู จาก Firestore มา {copied} รายการ และ อัพเดทเมนู {UpdateValue} รายการเรียบร้อยแล้ว";
             }
             catch (Exception ex)
             {
