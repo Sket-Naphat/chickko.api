@@ -1,11 +1,17 @@
 using System;
+using chickko.api.Data;
 using chickko.api.Interface;
+using chickko.api.Models;
 using Google.Cloud.Firestore;
 
 namespace chickko.api.Services
 {
     public class UtilService : IUtilService
     {
+        private readonly ChickkoContext _context;
+        public UtilService(ChickkoContext context) {
+            _context = context;
+        }
         private FirestoreDb GetFirestoreDb()
         {
             //local
@@ -101,6 +107,12 @@ namespace chickko.api.Services
                         .WhereEqualTo(FieldPath.DocumentId, documentId);
 
             return await query.GetSnapshotAsync();
+        }
+
+        public async Task AddErrorLog(ErrorLog errorLog)
+        {
+            _context.ErrorLogs.Add(errorLog);
+            await _context.SaveChangesAsync();
         }
 
     }

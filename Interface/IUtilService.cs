@@ -1,4 +1,5 @@
 using System;
+using chickko.api.Models;
 using Google.Cloud.Firestore;
 
 namespace chickko.api.Interface
@@ -11,5 +12,6 @@ namespace chickko.api.Interface
         Task<QuerySnapshot> GetSnapshotFromFirestoreWithFiltersBetween(string collectionName, string? orderByField = null, string? whereField = null, string? whereValue = null, string? whereValue2 = null);
         Task<QuerySnapshot> GetSnapshotFromFirestoreWithDateGreaterThan(string collectionName, string? orderByField = null, string? whereField = null, string? dateTo = null);
         Task<QuerySnapshot> GetSnapshotFromFirestoreWithID(string collectionName, string DocumentId);
+        Task AddErrorLog(ErrorLog errorLog);
     }
 }

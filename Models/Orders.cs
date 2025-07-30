@@ -27,6 +27,7 @@ namespace chickko.api.Models
         public bool IsFinishOrder { get; set; } = false;
         [Range(0, double.MaxValue)]
         public decimal TotalPrice { get; set; }
+        public decimal TotalGrabPrice { get; set; } = 0;
         public string OrderRemark { get; set; } = string.Empty;
         public int? DiscountID { get; set; } = 0; // Foreign Key
         public Discount? Discount { get; set; } // Navigation Property for Discount

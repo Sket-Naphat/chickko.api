@@ -14,6 +14,8 @@ namespace chickko.api.Models
 
         [Column(TypeName = "decimal(10,2)")]
         public decimal Price { get; set; }
+        [Column(TypeName = "decimal(10,2)")]
+        public decimal GrabPrice { get; set; }
 
         [Column(TypeName = "decimal(10,2)")]
         public decimal Cost { get; set; }

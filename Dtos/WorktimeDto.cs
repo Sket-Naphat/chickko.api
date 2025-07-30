@@ -12,12 +12,14 @@ namespace chickko.api.Dtos
 
         public string ClockInLocation { get; set; } = "";
         public double TotalWorktime { get; set; } = 0;
-        public double wage { get; set; } = 0!;
-        public double bonus { get; set; } = 0;
+        public double WageCost { get; set; } = 0!;
+        public double Bonus { get; set; } = 0;
         public double Price { get; set; } = 0;
         public bool IsPurchese { get; set; } = false;
         public string Remark { get; set; } = "";
         [Required]
         public int EmployeeID { get; set; }
+        public string EmployeeName { get; set; } = ""!;
+        public bool Active { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using chickko.api.Data;
 using chickko.api.Dtos;
 using chickko.api.Interface;
@@ -16,6 +17,29 @@ namespace chickko.api.Services
             _context = context;
             _logger = logger;
         }
+        public async Task CreateCost(Cost _Cost)
+        {
+            try
+            {
+                _context.Cost.Add(_Cost);
+                await _context.SaveChangesAsync();
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "EF Core SaveChanges Error: {Message}", ex.InnerException?.Message ?? ex.Message);
+                throw;
+            }
+        }
+
+        public async Task<Cost> CreateCostReturnCostID(Cost cost)
+        {
+            _context.Cost.Add(cost);
+            await _context.SaveChangesAsync();
+            return cost;
+        }
+
+        #region Stock Cost
         public async Task<List<StockDto>> GetStockCostList(CostDto costDto) //http://localhost:5036/api/stock/GetStockCostList
         {
             try
@@ -23,7 +47,7 @@ namespace chickko.api.Services
                 //หาก่อนว่าในวันนี้มีรายการที่ต้องสั่งซื้อมั้ย
                 //var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchese).ToListAsync();
 
-                var query = _context.Cost.Where(c => !c.IsPurchese);
+                var query = _context.Cost.Where(c => !c.IsPurchese && c.CostCategoryID == 1);
 
                 if (costDto is { CostDate: not null and var date } && date != default)
                 {
@@ -71,27 +95,6 @@ namespace chickko.api.Services
                 _logger.LogError(ex, "เกิดข้อผิดพลาดในการคัดลอกเมนูจาก Firestore");
                 throw;
             }
-        }
-        public async Task CreateCost(Cost _Cost)
-        {
-            try
-            {
-                _context.Cost.Add(_Cost);
-                await _context.SaveChangesAsync();
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "EF Core SaveChanges Error: {Message}", ex.InnerException?.Message ?? ex.Message);
-                throw;
-            }
-        }
-
-        public async Task<Cost> CreateCostReturnCostID(Cost cost)
-        {
-            _context.Cost.Add(cost);
-            await _context.SaveChangesAsync();
-            return cost;
         }
 
         public async Task UpdateStockCost(UpdateStockCostDto updateStockCostDto)
@@ -174,5 +177,111 @@ namespace chickko.api.Services
                 throw;
             }
         }
+        #endregion
+        #region  WageCost
+        public async Task<List<WorktimeDto>> GetWageCostList()
+        {
+            try
+            {
+                // ดึงรายการที่ยังไม่จ่ายขึ้นมาก่อน
+
+                var _Worktime = await _context.Worktime
+                                .Include(w => w.Employee)
+                                .Where(w => w.IsPurchese == false).ToListAsync();
+
+                var _worktimeDto = new List<WorktimeDto>();
+                if (_Worktime != null && _Worktime.Count > 0)
+                {
+
+                    foreach (var work in _Worktime)
+                    {
+                        var WorktimeDto = new WorktimeDto
+                        {
+                            WorktimeID = work.WorktimeID,
+                            WorkDate = work.WorkDate.ToString("yyyy-mm-dd"),
+                            TimeClockIn = work.TimeClockIn.ToString(),
+                            TimeClockOut = work.TimeClockOut.ToString(),
+                            TotalWorktime = work.TotalWorktime,
+                            WageCost = work.WageCost,
+                            Bonus = work.Bonus,
+                            Price = work.Price,
+                            IsPurchese = work.IsPurchese,
+                            Remark = work.Remark,
+                            EmployeeID = work.EmployeeID,
+                            EmployeeName = work.Employee.Name
+                        };
+
+                        _worktimeDto.Add(WorktimeDto);
+                    }
+                }
+                return _worktimeDto;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการคัดลอกเมนูจาก Firestore");
+                throw;
+            }
+        }
+
+        public async Task UpdateWageCost(WorktimeDto worktime)
+        {
+            var dateString = worktime.WorkDate;
+            DateOnly dateOnly = DateOnly.ParseExact(dateString, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var timeString = worktime.TimeClockOut!;
+            var timeOnly = TimeOnly.ParseExact(timeString, "HH:mm:ss", CultureInfo.InvariantCulture);
+            var _cost = new Cost();
+
+            _cost = new Cost
+            {
+                CostCategoryID = 2,
+                CostPrice = worktime.Price,
+                CostDescription = worktime.Remark,
+                CostDate = dateOnly,
+                CostTime = timeOnly,
+                UpdateDate = DateOnly.FromDateTime(System.DateTime.Now),
+                UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now)
+            };
+            bool IsPurchese = worktime.IsPurchese;
+            if (IsPurchese)
+            {
+                _cost.IsPurchese = IsPurchese;
+                _cost.PurcheseDate = DateOnly.FromDateTime(System.DateTime.Now);
+                _cost.PurcheseTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                _cost.CostStatusID = 3; //จ่ายเงินแล้ว
+            }
+            else
+            {
+                _cost.CostStatusID = 2; //ยังไม่จ่าย
+            }
+            await CreateCost(_cost);
+
+            var tmp_Worktime = await _context.Worktime.FirstOrDefaultAsync(w => w.WorktimeID == worktime.WorktimeID);
+
+            //update worktime cost
+
+            if (tmp_Worktime != null)
+            {
+                if (worktime.TimeClockIn != null)
+                {
+                    TimeOnly timeOnlyTimeClockIn = TimeOnly.ParseExact(worktime.TimeClockIn, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    tmp_Worktime.TimeClockIn = timeOnlyTimeClockIn;
+                }
+                if (worktime.TimeClockOut != null)
+                {
+                    TimeOnly timeOnlyTimeClockOut = TimeOnly.ParseExact(worktime.TimeClockOut, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    tmp_Worktime.TimeClockOut = timeOnlyTimeClockOut;
+                }
+                tmp_Worktime.TotalWorktime = worktime.TotalWorktime;
+                tmp_Worktime.WageCost = worktime.WageCost;
+                tmp_Worktime.Bonus = worktime.Bonus;
+                tmp_Worktime.Price = worktime.Price;
+                tmp_Worktime.IsPurchese = worktime.IsPurchese;
+                tmp_Worktime.Active = worktime.Active;
+                tmp_Worktime.Remark = worktime.Remark;
+                tmp_Worktime.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
+                tmp_Worktime.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+            }
+        }
+        #endregion
     }
 }

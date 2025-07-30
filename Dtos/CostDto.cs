@@ -8,7 +8,7 @@ namespace chickko.api.Dtos
     {
         public int CostID { get; set; }
         public int CostCategoryID { get; set; } // id ประเภทค่าใช้จ่าย
-        public int CostPrice { get; set; } = 0; //ราคาที่ซื้อ
+        public double CostPrice { get; set; } = 0; //ราคาที่ซื้อ
         public string CostDescription { get; set; } = string.Empty; //รายละเอียดการซื้อ
         public DateOnly? CostDate { get; set; } // ใช้ null! เพื่อบอกว่าไม่ต้องการค่า null
         public TimeOnly? CostTime { get; set; }
