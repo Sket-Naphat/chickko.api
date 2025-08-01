@@ -45,8 +45,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "https://chickkoapp.web.app", // ✅ เพิ่ม origin ของ frontend ตัวจริง
                 "https://chickkoapi.up.railway.app",
-                "http://localhost:5500",
-                "http://127.0.0.1:5500"
+                "http://localhost:5501",
+                "http://127.0.0.1:5501"
             )
             .AllowAnyMethod()
             .AllowAnyHeader();
@@ -66,6 +66,9 @@ CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
 var app = builder.Build();
 app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -74,9 +77,6 @@ if (app.Environment.IsDevelopment())
 
 
 app.UseHttpsRedirection();
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.MapControllers(); // ⭐️ Map Controller routes
 
