@@ -24,7 +24,12 @@ namespace chickko.api.controller
             try
             {
                 var result = await _stockService.GetCurrentStock();
-                return Ok(result);
+                return Ok(new
+                {
+                    success = true,
+                    data = result,
+                    message = "โหลดข้อมูลสำเร็จ"
+                });
             }
             catch (Exception ex)
             {

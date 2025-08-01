@@ -21,13 +21,21 @@ namespace chickko.api.Controllers
         public async Task<IActionResult> CopyOrderFromFirestore(CopyOrderFromFirestore _CopyOrderFromFirestore)
         {
             var result = await _ordersService.CopyOrderFromFirestore(_CopyOrderFromFirestore.OrderDateFrom.ToString() ?? "", _CopyOrderFromFirestore.OrderDateTo.ToString() ?? "");
-            return Ok(result);
+            return Ok(new
+            {
+                success = true,
+                message = result
+            });
         }
         [HttpPost("ImportOrderFromExcel")]
         public async Task<IActionResult> ImportOrderFromExcel()
         {
             var result = await _ordersService.ImportOrderFromExcel();
-            return Ok(result);
+            return Ok(new
+            {
+                success = true,
+                message = result
+            });
         }
     }
 }
