@@ -69,16 +69,16 @@ public class OrdersService : IOrdersService
                 var _orderTime = TimeOnly.Parse(data["orderTime"]?.ToString() ?? "").ToString("HH:mm:ss");
                 var _customerName = data["customerName"]?.ToString()?.Replace("'", "''"); // escape ' ด้วย
 
-                var sql = $@"
-                    SELECT * FROM ""OrderHeaders"" 
-                    WHERE ""OrderDate"" = '{_orderDate}' 
-                    AND ""OrderTime"" = '{_orderTime}' 
-                    AND ""CustomerName"" = '{_customerName}'";
+                // var sql = $@"
+                //     SELECT * FROM ""OrderHeaders"" 
+                //     WHERE ""OrderDate"" = '{_orderDate}' 
+                //     AND ""OrderTime"" = '{_orderTime}' 
+                //     AND ""CustomerName"" = '{_customerName}'";
 
-                var existingOrder = await _context.OrderHeaders
-                    .FromSqlRaw(sql)
-                    .FirstOrDefaultAsync();
-
+                // var existingOrder = await _context.OrderHeaders
+                //     .FromSqlRaw(sql)
+                //     .FirstOrDefaultAsync();
+                var existingOrder = await _context.OrderHeaders.FirstOrDefaultAsync(o => o.IdInFirestore == doc.Id);
 
                 if (existingOrder != null)
                 {
