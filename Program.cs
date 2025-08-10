@@ -40,18 +40,30 @@ builder.Services.AddAuthentication("Bearer")
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.WithOrigins(
-                "https://chickkoapp.web.app", // ✅ เพิ่ม origin ของ frontend ตัวจริง
-                "https://chickkoapi.up.railway.app",
-                "http://localhost:5501",
-                "http://127.0.0.1:5501"
-            )
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
+    options.AddPolicy("Web", policy =>
+        policy
+            .WithMethods("GET","POST","PUT","DELETE","PATCH","OPTIONS")
+            .WithHeaders("*")
+            .SetIsOriginAllowed(origin =>
+            {
+                try
+                {
+                    var host = new Uri(origin).Host;
+                    return
+                        host.EndsWith(".vercel.app") ||                 // vercel preview ทั้งหมด
+                        origin == "https://chickko-pos.vercel.app" ||   // vercel prod
+                        origin == "https://chickkoapp.web.app"   ||     // firebase (ถ้ามี)
+                        origin.StartsWith("http://localhost:")   ||     // dev http (vite ส่วนใหญ่ 5173/4173)
+                        origin.StartsWith("https://localhost:")  ||     // dev https (เผื่อมี)
+                        origin.StartsWith("http://127.0.0.1:")   ||
+                        origin.StartsWith("https://127.0.0.1:");
+                }
+                catch { return false; }
+            })
+            .DisallowCredentials()  // ใช้ Bearer header, ไม่ต้องเปิด credentials
+    );
 });
+
 var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
 
 if (!string.IsNullOrEmpty(credentialsJson))
@@ -65,7 +77,8 @@ CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 
 
 var app = builder.Build();
-app.UseCors("AllowAll");
+
+app.UseCors("Web");  
 app.UseAuthentication();
 app.UseAuthorization();
 

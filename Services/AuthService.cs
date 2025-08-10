@@ -60,7 +60,7 @@ namespace chickko.api.Services
                 audience: _config["Jwt:Audience"], // กำหนด Audience 
                 claims: claims,// กำหนด Claims
                 notBefore: DateTime.Now, // กำหนดเวลาเริ่มต้นของ Token         
-                expires: DateTime.Now.AddHours(1),  // กำหนดเวลา Expiration ของ Token    
+                expires: DateTime.Now.AddHours(12),  // กำหนดเวลา Expiration ของ Token    
                 signingCredentials: creds   // กำหนด Signing Credentials 
             );
 
