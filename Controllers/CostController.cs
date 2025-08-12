@@ -19,6 +19,19 @@ namespace chickko.api.controller
             _costService = costService;
             _utilService = utilService;
         }
+        [HttpGet("GetCostCategoryList")]
+        public async Task<IActionResult> GetCostCategoryList()
+        {
+            try
+            {
+                var result = await _costService.GetCostCategoryList();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         //new cost
         [HttpPost("GetStockCostList")]
         public async Task<IActionResult> GetStockCostList(CostDto costDto)
@@ -58,10 +71,10 @@ namespace chickko.api.controller
                     CostDescription = costDto.CostDescription,
                     CostDate = costDto.CostDate ?? DateOnly.FromDateTime(System.DateTime.Now),
                     CostTime = costDto.CostTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
-                    IsPurchese = costDto.IsPurchese,
-                    PurcheseDate = DateOnly.FromDateTime(System.DateTime.Now),
-                    PurcheseTime = TimeOnly.FromDateTime(System.DateTime.Now),
-                    CostStatusID = costDto.CostStatusID,
+                    IsPurchase = costDto.IsPurchase,
+                    PurchaseDate = DateOnly.FromDateTime(System.DateTime.Now),
+                    PurchaseTime = TimeOnly.FromDateTime(System.DateTime.Now),
+                    CostStatusID = costDto.CostStatusID == null ? (costDto.IsPurchase ? 3 : 2) : costDto.CostStatusID, //ถ้าไม่มีค่า CostStatusID ให้ใช้ค่า IsPurchase แทน
                 };
                 await _costService.CreateCost(_cost);
                 return Ok();

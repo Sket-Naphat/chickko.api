@@ -31,6 +31,18 @@ namespace chickko.api.Services
                 throw;
             }
         }
+        public async Task<List<CostCategory>> GetCostCategoryList()
+        {
+            try
+            {
+                return await _context.CostCategory.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการดึงรายการประเภทค่าใช้จ่าย");
+                throw;
+            }
+        }
 
         public async Task<Cost> CreateCostReturnCostID(Cost cost)
         {
@@ -45,15 +57,19 @@ namespace chickko.api.Services
             try
             {
                 //หาก่อนว่าในวันนี้มีรายการที่ต้องสั่งซื้อมั้ย
-                //var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchese).ToListAsync();
+                //var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchase).ToListAsync();
 
-                var query = _context.Cost.Where(c => !c.IsPurchese && c.CostCategoryID == 1);
+                var query = _context.Cost.Where(c => !c.IsPurchase && c.CostCategoryID == 1);
 
                 if (costDto is { CostDate: not null and var date } && date != default)
                 {
                     query = query.Where(c => c.CostDate == date);
                 }
-
+                //สำหรับกรองจ่ายเงินหรือยังไม่จ่ายเงิน ถ้าไม่ต้องการกรองให้ส่งค่า null
+                if (costDto.CostStatusID != null)
+                {
+                    query = query.Where(c => c.CostStatusID == costDto.CostStatusID);
+                }
                 var _cost = await query.ToListAsync();
 
                 var StockDto = new List<StockDto>();
@@ -109,16 +125,16 @@ namespace chickko.api.Services
                                     .FirstOrDefaultAsync(c => c.CostId == updateStockCostDto.CostDto.CostID);
                 if (_cost != null)
                 {
-                    bool IsPurchese = updateStockCostDto.CostDto.IsPurchese;
+                    bool IsPurchase = updateStockCostDto.CostDto.IsPurchase;
                     _cost.CostPrice = updateStockCostDto.CostDto.CostPrice;
                     _cost.CostDescription = updateStockCostDto.CostDto.CostDescription;
 
 
-                    if (IsPurchese)
+                    if (IsPurchase)
                     {
-                        _cost.IsPurchese = IsPurchese;
-                        _cost.PurcheseDate = DateOnly.FromDateTime(System.DateTime.Now);
-                        _cost.PurcheseTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                        _cost.IsPurchase = IsPurchase;
+                        _cost.PurchaseDate = DateOnly.FromDateTime(System.DateTime.Now);
+                        _cost.PurchaseTime = TimeOnly.FromDateTime(System.DateTime.Now);
                         _cost.CostStatusID = 3; //จ่ายเงินแล้ว
                     }
                     else
@@ -139,9 +155,9 @@ namespace chickko.api.Services
 
                             if (_stock != null)
                             {
-                                _stock.TotalQTY = StockDto.TotalQTY + StockDto.PurcheseQTY; //จำนวนคงเหลือ
+                                _stock.TotalQTY = StockDto.TotalQTY + StockDto.PurchaseQTY; //จำนวนคงเหลือ
                                 _stock.Remark = StockDto.Remark;
-                                int StockInQTY = StockDto.StockInQTY - StockDto.PurcheseQTY;//หาจำนวนที่ขาด (ที่ต้องซื้อเพิ่ม)
+                                int StockInQTY = StockDto.StockInQTY - StockDto.PurchaseQTY;//หาจำนวนที่ขาด (ที่ต้องซื้อเพิ่ม)
                                 StockInQTY = (StockInQTY < 0) ? 0 : StockInQTY;
                                 _stock.StockInQTY = StockInQTY;
                                 _stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
@@ -155,9 +171,9 @@ namespace chickko.api.Services
                                     if (_stockLog != null)
                                     {
                                         _stockLog.SupplyID = StockDto.SupplyId;
-                                        _stockLog.PurcheseQTY = StockDto.PurcheseQTY;
-                                        _stockLog.DipQTY = StockDto.PurcheseQTY - StockDto.StockInQTY;
-                                        _stockLog.IsPurchese = IsPurchese;
+                                        _stockLog.PurchaseQTY = StockDto.PurchaseQTY;
+                                        _stockLog.DipQTY = StockDto.PurchaseQTY - StockDto.StockInQTY;
+                                        _stockLog.IsPurchase = IsPurchase;
                                         _stockLog.Price = StockDto.Price;
 
                                     }
@@ -187,7 +203,7 @@ namespace chickko.api.Services
 
                 var _Worktime = await _context.Worktime
                                 .Include(w => w.Employee)
-                                .Where(w => w.IsPurchese == false).ToListAsync();
+                                .Where(w => w.IsPurchase == false).ToListAsync();
 
                 var _worktimeDto = new List<WorktimeDto>();
                 if (_Worktime != null && _Worktime.Count > 0)
@@ -198,14 +214,14 @@ namespace chickko.api.Services
                         var WorktimeDto = new WorktimeDto
                         {
                             WorktimeID = work.WorktimeID,
-                            WorkDate = work.WorkDate.ToString("yyyy-mm-dd"),
+                            WorkDate = work.WorkDate.ToString("yyyy-MM-dd"),
                             TimeClockIn = work.TimeClockIn.ToString(),
                             TimeClockOut = work.TimeClockOut.ToString(),
                             TotalWorktime = work.TotalWorktime,
                             WageCost = work.WageCost,
                             Bonus = work.Bonus,
                             Price = work.Price,
-                            IsPurchese = work.IsPurchese,
+                            IsPurchase = work.IsPurchase,
                             Remark = work.Remark,
                             EmployeeID = work.EmployeeID,
                             EmployeeName = work.Employee.Name
@@ -241,12 +257,12 @@ namespace chickko.api.Services
                 UpdateDate = DateOnly.FromDateTime(System.DateTime.Now),
                 UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now)
             };
-            bool IsPurchese = worktime.IsPurchese;
-            if (IsPurchese)
+            bool IsPurchase = worktime.IsPurchase;
+            if (IsPurchase)
             {
-                _cost.IsPurchese = IsPurchese;
-                _cost.PurcheseDate = DateOnly.FromDateTime(System.DateTime.Now);
-                _cost.PurcheseTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                _cost.IsPurchase = IsPurchase;
+                _cost.PurchaseDate = DateOnly.FromDateTime(System.DateTime.Now);
+                _cost.PurchaseTime = TimeOnly.FromDateTime(System.DateTime.Now);
                 _cost.CostStatusID = 3; //จ่ายเงินแล้ว
             }
             else
@@ -263,23 +279,68 @@ namespace chickko.api.Services
             {
                 if (worktime.TimeClockIn != null)
                 {
-                    TimeOnly timeOnlyTimeClockIn = TimeOnly.ParseExact(worktime.TimeClockIn, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    TimeOnly timeOnlyTimeClockIn = TimeOnly.ParseExact(worktime.TimeClockIn, "HH:mm:ss", CultureInfo.InvariantCulture);
                     tmp_Worktime.TimeClockIn = timeOnlyTimeClockIn;
                 }
                 if (worktime.TimeClockOut != null)
                 {
-                    TimeOnly timeOnlyTimeClockOut = TimeOnly.ParseExact(worktime.TimeClockOut, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+                    TimeOnly timeOnlyTimeClockOut = TimeOnly.ParseExact(worktime.TimeClockOut, "HH:mm:ss", CultureInfo.InvariantCulture);
                     tmp_Worktime.TimeClockOut = timeOnlyTimeClockOut;
                 }
                 tmp_Worktime.TotalWorktime = worktime.TotalWorktime;
                 tmp_Worktime.WageCost = worktime.WageCost;
                 tmp_Worktime.Bonus = worktime.Bonus;
                 tmp_Worktime.Price = worktime.Price;
-                tmp_Worktime.IsPurchese = worktime.IsPurchese;
+                tmp_Worktime.IsPurchase = worktime.IsPurchase;
                 tmp_Worktime.Active = worktime.Active;
                 tmp_Worktime.Remark = worktime.Remark;
                 tmp_Worktime.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
                 tmp_Worktime.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+            }
+        }
+
+        public async Task<List<CostDto>> GetCostList(CostDto costDto)
+        {
+            try
+            {
+                var query = _context.Cost.AsQueryable();
+
+                //กรองจ่ายเงิน
+                if (costDto.IsPurchase)
+                {
+                    query = query.Where(c => c.IsPurchase == costDto.IsPurchase);
+                }
+                //กรองหมวดหมู่ค่าใช้จ่าย
+                if (costDto.CostCategoryID > 0)
+                {
+                    query = query.Where(c => c.CostCategoryID == costDto.CostCategoryID);
+                }
+                //กรองวันที่ค่าใช้จ่าย
+                if (costDto.CostDate.HasValue)
+                {
+                    query = query.Where(c => c.CostDate == costDto.CostDate.Value);
+                }
+
+                var costs = await query.ToListAsync();
+
+                return costs.Select(c => new CostDto
+                {
+                    CostID = c.CostId,
+                    CostCategoryID = c.CostCategoryID,
+                    CostPrice = c.CostPrice,
+                    CostDescription = c.CostDescription,
+                    CostDate = c.CostDate,
+                    CostTime = c.CostTime,
+                    UpdateDate = c.UpdateDate,
+                    UpdateTime = c.UpdateTime,
+                    IsPurchase = c.IsPurchase,
+                    CostStatusID = c.CostStatusID
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการดึงรายการค่าใช้จ่าย");
+                throw;
             }
         }
         #endregion

@@ -72,7 +72,7 @@ namespace chickko.api.controller
         //             CostTime = _stockLog.StockInTime,
         //             UpdateDate = DateOnly.FromDateTime(DateTime.Now),
         //             UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
-        //             IsPurchese = false,
+        //             IsPurchase = false,
         //             CostStatusID = 1,
         //         };
         //         await _costService.CreateCost(addCost);
@@ -105,7 +105,7 @@ namespace chickko.api.controller
                 CostTime = nowTime,
                 UpdateDate = nowDate,
                 UpdateTime = nowTime,
-                IsPurchese = false,
+                IsPurchase = false,
                 CostStatusID = 1,
             };
 

@@ -40,7 +40,7 @@ namespace chickko.api.Services
                         WorkDate = workDate,
                         TimeClockIn = timeClockIn,
                         Active = true,
-                        IsPurchese = false,
+                        IsPurchase = false,
                         ClockInLocation = "",
                         TotalWorktime = 0,
                         UpdateDate = DateOnly.FromDateTime(DateTime.Now),

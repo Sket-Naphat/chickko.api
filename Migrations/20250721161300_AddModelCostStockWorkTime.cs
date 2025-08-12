@@ -84,7 +84,7 @@ namespace chickko.api.Migrations
                 defaultValue: 0);
 
             migrationBuilder.AddColumn<bool>(
-                name: "IsPurchese",
+                name: "IsPurchase",
                 table: "StockLogs",
                 type: "boolean",
                 nullable: false,
@@ -195,7 +195,7 @@ namespace chickko.api.Migrations
                 table: "StockLogs");
 
             migrationBuilder.DropColumn(
-                name: "IsPurchese",
+                name: "IsPurchase",
                 table: "StockLogs");
 
             migrationBuilder.DropColumn(

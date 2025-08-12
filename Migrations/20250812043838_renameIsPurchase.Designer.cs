@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250812043838_renameIsPurchase")]
+    partial class renameIsPurchase
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -79,10 +82,10 @@ namespace chickko.api.Migrations
                     b.Property<bool>("IsPurchase")
                         .HasColumnType("boolean");
 
-                    b.Property<DateOnly>("PurchaseDate")
+                    b.Property<DateOnly>("PurcheseDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly>("PurchaseTime")
+                    b.Property<TimeOnly>("PurcheseTime")
                         .HasColumnType("time without time zone");
 
                     b.Property<DateOnly>("UpdateDate")
@@ -597,7 +600,7 @@ namespace chickko.api.Migrations
                     b.Property<int>("Price")
                         .HasColumnType("integer");
 
-                    b.Property<int>("PurchaseQTY")
+                    b.Property<int>("PurcheseQTY")
                         .HasColumnType("integer");
 
                     b.Property<string>("Remark")

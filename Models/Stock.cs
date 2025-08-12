@@ -41,10 +41,10 @@ namespace chickko.api.Models
         public int RequiredQTY { get; set; } = 0!;// จำนวนที่ต้องการ
         public int TotalQTY { get; set; } = 0;// จำนวนคงเหลือ
         public int StockInQTY { get; set; } = 0;//จำนวนที่ต้องซื้อเพิ่ม
-        public int PurcheseQTY { get; set; } = 0; //จำนวนที่ซื้อจริง
-        public int DipQTY { get; set; } = 0;//จำนวนที่มันดิปกันอยู่ PurcheseQTY - StockInQTY
+        public int PurchaseQTY { get; set; } = 0; //จำนวนที่ซื้อจริง
+        public int DipQTY { get; set; } = 0;//จำนวนที่มันดิปกันอยู่ PurchaseQTY - StockInQTY
         public int Price { get; set; } = 0;//ราคาที่ซื้อ
-        public bool IsPurchese { get; set; } = false;
+        public bool IsPurchase { get; set; } = false;
         public int SupplyID { get; set; } = 0;
         public Supplier? Supplier { get; set; } = null;
         public string Remark { get; set; } = string.Empty;

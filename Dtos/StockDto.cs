@@ -15,7 +15,7 @@ namespace chickko.api.Dtos
         public int TotalQTY { get; set; }
         public int RequiredQTY { get; set; }
         public int StockInQTY { get; set; }
-        public int PurcheseQTY { get; set; }
+        public int PurchaseQTY { get; set; }
         public string UpdateDate { get; set; } = string.Empty;
         public string UpdateTime { get; set; } = string.Empty;
         public string Remark { get; set; } = string.Empty;
@@ -45,7 +45,7 @@ namespace chickko.api.Dtos
         public string StockInTime { get; set; } = DateTime.Now.ToString("HH:mm:ss");
         [Required]
         public int StockInQTY { get; set; }
-        public int PurcheseQTY { get; set; } = 0;
+        public int PurchaseQTY { get; set; } = 0;
         public int Price { get; set; } = 0;
         public int SupplyId { get; set; } = 0;
         public string Remark { get; set; } = string.Empty;

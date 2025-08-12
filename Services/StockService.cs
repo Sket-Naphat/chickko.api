@@ -130,9 +130,9 @@ namespace chickko.api.Services
             var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
             var time = TimeOnly.Parse(stockInDto.StockInTime);
 
-            int DipQTY = stockInDto.PurcheseQTY - stockInDto.StockInQTY; //จำนวนที่สั่ง กับที่ซื้อจีิง
+            int DipQTY = stockInDto.PurchaseQTY - stockInDto.StockInQTY; //จำนวนที่สั่ง กับที่ซื้อจีิง
 
-            int StockInQTY = stockInDto.StockInQTY - stockInDto.PurcheseQTY;
+            int StockInQTY = stockInDto.StockInQTY - stockInDto.PurchaseQTY;
             StockInQTY = (StockInQTY < 0) ? 0 : StockInQTY;
 
             // 3. สร้าง StockLog ใหม่สำหรับบันทึกการ "ซื้อเข้า"
@@ -142,15 +142,15 @@ namespace chickko.api.Services
                 StockInDate = date,
                 StockInTime = time,
                 StockInQTY = stockInDto.StockInQTY, //จำนวนที่ต้องซื้อเพิ่ม
-                PurcheseQTY = stockInDto.PurcheseQTY,
+                PurchaseQTY = stockInDto.PurchaseQTY,
                 DipQTY = DipQTY,
                 Price = stockInDto.Price,
                 SupplyID = stockInDto.SupplyId,
                 RequiredQTY = stock.RequiredQTY, // จำนวนที่ต้องการ
-                TotalQTY = stock.TotalQTY + stockInDto.PurcheseQTY, // คำนวณยอดคงเหลือใหม่
+                TotalQTY = stock.TotalQTY + stockInDto.PurchaseQTY, // คำนวณยอดคงเหลือใหม่
                 StockLogTypeID = 2, // 2 = Purchase (ซื้อเข้า)
                 Remark = stockInDto.Remark,
-                IsPurchese = true
+                IsPurchase = true
             };
 
             // 4. บันทึก StockLog ลงฐานข้อมูล

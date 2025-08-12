@@ -17,7 +17,7 @@ namespace chickko.api.Models
         public double WageCost { get; set; } = 0!;
         public double Bonus { get; set; } = 0;
         public double Price { get; set; } = 0;
-        public bool IsPurchese { get; set; } = false;
+        public bool IsPurchase { get; set; } = false;
         public bool Active { get; set; } = true;
         public string Remark { get; set; } = ""; 
         public DateOnly UpdateDate { get; set; }  = DateOnly.FromDateTime(System.DateTime.Now); //วันที่ทำงาน

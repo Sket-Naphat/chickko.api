@@ -15,7 +15,7 @@ namespace chickko.api.Dtos
         public double WageCost { get; set; } = 0!;
         public double Bonus { get; set; } = 0;
         public double Price { get; set; } = 0;
-        public bool IsPurchese { get; set; } = false;
+        public bool IsPurchase { get; set; } = false;
         public string Remark { get; set; } = "";
         [Required]
         public int EmployeeID { get; set; }
