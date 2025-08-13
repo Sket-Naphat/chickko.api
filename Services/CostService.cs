@@ -299,7 +299,7 @@ namespace chickko.api.Services
             }
         }
 
-        public async Task<List<CostDto>> GetCostList(CostDto costDto)
+        public async Task<List<CostDto>> GetAllCostList(CostDto costDto)
         {
             try
             {

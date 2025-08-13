@@ -32,6 +32,19 @@ namespace chickko.api.controller
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpPost("GetAllCostList")]
+        public async Task<IActionResult> GetAllCostList(CostDto costDto)
+        {
+            try
+            {
+                var result = await _costService.GetAllCostList(costDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         //new cost
         [HttpPost("GetStockCostList")]
         public async Task<IActionResult> GetStockCostList(CostDto costDto)
