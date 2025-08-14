@@ -303,13 +303,11 @@ namespace chickko.api.Services
         {
             try
             {
-                var query = _context.Cost.AsQueryable();
+                var query = _context.Cost.AsQueryable()
+                .Include(c => c.CostCategory)
+                .Include(c => c.CostStatus)
+                .Where(c => c.IsPurchase == costDto.IsPurchase);
 
-                //กรองจ่ายเงิน
-                if (costDto.IsPurchase)
-                {
-                    query = query.Where(c => c.IsPurchase == costDto.IsPurchase);
-                }
                 //กรองหมวดหมู่ค่าใช้จ่าย
                 if (costDto.CostCategoryID > 0)
                 {
@@ -321,12 +319,13 @@ namespace chickko.api.Services
                     query = query.Where(c => c.CostDate == costDto.CostDate.Value);
                 }
 
-                var costs = await query.ToListAsync();
+                var costs = await query.OrderByDescending(c => c.CostDate).ThenByDescending(c => c.CostTime).ToListAsync();
 
                 return costs.Select(c => new CostDto
                 {
                     CostID = c.CostId,
                     CostCategoryID = c.CostCategoryID,
+                    costCategory = c.CostCategory,
                     CostPrice = c.CostPrice,
                     CostDescription = c.CostDescription,
                     CostDate = c.CostDate,
@@ -334,7 +333,8 @@ namespace chickko.api.Services
                     UpdateDate = c.UpdateDate,
                     UpdateTime = c.UpdateTime,
                     IsPurchase = c.IsPurchase,
-                    CostStatusID = c.CostStatusID
+                    CostStatusID = c.CostStatusID,
+                    CostStatus = c.CostStatus,
                 }).ToList();
             }
             catch (Exception ex)

@@ -8,6 +8,7 @@ namespace chickko.api.Dtos
     {
         public int CostID { get; set; }
         public int CostCategoryID { get; set; } // id ประเภทค่าใช้จ่าย
+        public CostCategory? costCategory { get; set; } = null!; // ประเภทค่าใช้จ่าย
         public double CostPrice { get; set; } = 0; //ราคาที่ซื้อ
         public string CostDescription { get; set; } = string.Empty; //รายละเอียดการซื้อ
         public DateOnly? CostDate { get; set; } // ใช้ null! เพื่อบอกว่าไม่ต้องการค่า null
@@ -16,6 +17,7 @@ namespace chickko.api.Dtos
         public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
         public bool IsPurchase { get; set; } = false; //ใชเพื่อบันทึกกรณีที่ยังไม่กดบันทึกแค่กรอกไว้เฉยๆ ให้เก็บค่าที่เคยกรอกไว้ไปแสดง
         public int? CostStatusID { get; set; } = null; // ใช้เพื่อบอกว่าจ่ายเงินแล้วหรือยัง ถ้าไม่ต้องการกรองให้ส่งค่า null
+        public CostStatus? CostStatus { get; set; } = null!; // ใช้เพื่อบอกสถานะการจ่ายเงิน
     }
     public class UpdateStockCostDto
     {
