@@ -49,7 +49,7 @@ namespace chickko.api.Services
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString())
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
@@ -78,11 +78,12 @@ namespace chickko.api.Services
                 Username = request.Username,
                 Password = request.Password,
                 Name = request.Name,
-                Role = "user",
                 DateOfBirth = DateTime.SpecifyKind(request.DateOfBirth, DateTimeKind.Utc),
                 StartWorkDate = DateTime.SpecifyKind(request.StartWorkDate, DateTimeKind.Utc),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
+                UserPermistionID = 3, // กำหนดค่าเริ่มต้นสำหรับ UserPermistionID
+                Contact = "",
                 IsActive = true
             };
 

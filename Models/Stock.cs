@@ -52,6 +52,13 @@ namespace chickko.api.Models
         public StockLogType? StockLogType { get; set; }
         public int CostId { get; set; }
         public Cost? Cost { get; set; } = null;
+        public bool Active { get; set; } = true; // ใช้เพื่อบอกว่าการบันทึกนี้ยังใช้งานอยู่หรือไม่
+        public int CreateBy { get; set; } // ID ของผู้ที่สร้าง log
+        public DateOnly CreateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
+        public TimeOnly CreateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
+        public int UpdateBy { get; set; } // ID ของผู้ที่แก้ไข log
+        public DateOnly UpdateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
+        public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
     }
     public class Supplier
     {

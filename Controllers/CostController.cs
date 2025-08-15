@@ -85,11 +85,51 @@ namespace chickko.api.controller
                     CostDate = costDto.CostDate ?? DateOnly.FromDateTime(System.DateTime.Now),
                     CostTime = costDto.CostTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
                     IsPurchase = costDto.IsPurchase,
-                    PurchaseDate = DateOnly.FromDateTime(System.DateTime.Now),
-                    PurchaseTime = TimeOnly.FromDateTime(System.DateTime.Now),
                     CostStatusID = costDto.CostStatusID == null ? (costDto.IsPurchase ? 3 : 2) : costDto.CostStatusID, //ถ้าไม่มีค่า CostStatusID ให้ใช้ค่า IsPurchase แทน
+                    CreateBy = costDto.UpdateBy ?? 0,
+                    CreateDate = costDto.CreateDate ?? DateOnly.FromDateTime(System.DateTime.Now),
+                    CreateTime = costDto.CreateTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
+                    IsActive = true
                 };
+                if (costDto.IsPurchase)
+                {
+                    _cost.PurchaseDate = costDto.PurchaseDate ?? DateOnly.FromDateTime(System.DateTime.Now);
+                    _cost.PurchaseTime = costDto.PurchaseTime ?? TimeOnly.FromDateTime(System.DateTime.Now);
+                }
                 await _costService.CreateCost(_cost);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                var errorLog = new ErrorLog
+                {
+                    Message = ex.Message
+                };
+                await _utilService.AddErrorLog(errorLog);
+                return BadRequest("เกิดข้อผิดพลาดในการเพิ่มต้นทุน");
+    
+            }
+        }
+        [HttpPost("UpdatePurchaseCost")]
+        public async Task<IActionResult> UpdatePurchaseCost(CostDto costDto)
+        {
+            try
+            {
+                var _cost = new Cost
+                {
+                    CostId = costDto.CostID,
+                    CostCategoryID = costDto.CostCategoryID,
+                    CostPrice = costDto.CostPrice,
+                    CostDescription = costDto.CostDescription,
+                    IsPurchase = costDto.IsPurchase,
+                    PurchaseDate = costDto.PurchaseDate ?? DateOnly.FromDateTime(System.DateTime.Now),
+                    PurchaseTime = costDto.PurchaseTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
+                    CostStatusID = costDto.CostStatusID == null ? (costDto.IsPurchase ? 3 : 2) : costDto.CostStatusID, //ถ้าไม่มีค่า CostStatusID ให้ใช้ค่า IsPurchase แทน
+                    UpdateBy = costDto.UpdateBy ?? 0, // ถ้า UpdateBy เป็น null ให้ใช้ค่า 0
+                    UpdateDate = costDto.UpdateDate ?? DateOnly.FromDateTime(System.DateTime.Now),
+                    UpdateTime = costDto.UpdateTime ?? TimeOnly.FromDateTime(System.DateTime.Now)
+                };
+                await _costService.UpdatePurchaseCost(_cost);
                 return Ok();
             }
             catch (Exception ex)

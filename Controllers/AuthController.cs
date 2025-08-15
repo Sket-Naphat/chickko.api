@@ -24,7 +24,13 @@ namespace chickko.api.Controllers
                 return Unauthorized("Invalid username or password");
 
             var token = _authService.GenerateJwtToken(loginUser);
-            return Ok(new { token });
+            return Ok(new
+            {
+                token,
+                userId = loginUser.UserId,
+                name = loginUser.Name,
+                userPermissionId = loginUser.UserPermistionID
+            });
         }
 
         [HttpPost("register")]

@@ -81,7 +81,7 @@ namespace chickko.api.Services
 
 
                 var _Worktime = await _context.Worktime.FirstOrDefaultAsync(w => w.WorkDate == workDate && w.EmployeeID == WorktimeDto.EmployeeID);
-                var _Employee = await _context.Users.Include(u => u.UserPermistion).FirstOrDefaultAsync(e => e.Id == WorktimeDto.EmployeeID);
+                var _Employee = await _context.Users.Include(u => u.UserPermistion).FirstOrDefaultAsync(e => e.UserId == WorktimeDto.EmployeeID);
 
 
                 if (_Worktime != null && _Employee != null && _Employee.UserPermistion != null)

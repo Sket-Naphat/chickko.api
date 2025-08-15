@@ -50,6 +50,37 @@ namespace chickko.api.Services
             await _context.SaveChangesAsync();
             return cost;
         }
+        public async Task UpdatePurchaseCost(Cost cost)
+        {
+            try
+            {
+                var existingCost = await _context.Cost.FirstOrDefaultAsync(c => c.CostId == cost.CostId);
+                if (existingCost != null)
+                {
+                    existingCost.CostCategoryID = cost.CostCategoryID;
+                    existingCost.CostPrice = cost.CostPrice;
+                    existingCost.CostDescription = cost.CostDescription;
+                    existingCost.IsPurchase = cost.IsPurchase;
+                    existingCost.PurchaseDate = cost.PurchaseDate;
+                    existingCost.PurchaseTime = cost.PurchaseTime;
+                    existingCost.CostStatusID = cost.CostStatusID;
+                    existingCost.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
+                    existingCost.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                    existingCost.UpdateBy = cost.UpdateBy;
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    _logger.LogWarning("Cost with ID {CostId} not found for update.", cost.CostId);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการอัพเดทค่าใช้จ่าย");
+                throw;
+            }
+        }
 
         #region Stock Cost
         public async Task<List<StockDto>> GetStockCostList(CostDto costDto) //http://localhost:5036/api/stock/GetStockCostList
@@ -327,7 +358,7 @@ namespace chickko.api.Services
                     CostCategoryID = c.CostCategoryID,
                     costCategory = c.CostCategory,
                     CostPrice = c.CostPrice,
-                    CostDescription = c.CostDescription,
+                    CostDescription = c.CostDescription ?? string.Empty,
                     CostDate = c.CostDate,
                     CostTime = c.CostTime,
                     UpdateDate = c.UpdateDate,
@@ -344,5 +375,6 @@ namespace chickko.api.Services
             }
         }
         #endregion
+
     }
 }

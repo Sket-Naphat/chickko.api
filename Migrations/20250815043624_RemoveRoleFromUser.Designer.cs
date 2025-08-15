@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250815043624_RemoveRoleFromUser")]
+    partial class RemoveRoleFromUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -60,10 +63,11 @@ namespace chickko.api.Migrations
                     b.Property<int>("CostCategoryID")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly?>("CostDate")
+                    b.Property<DateOnly>("CostDate")
                         .HasColumnType("date");
 
                     b.Property<string>("CostDescription")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<double>("CostPrice")
@@ -72,16 +76,16 @@ namespace chickko.api.Migrations
                     b.Property<int?>("CostStatusID")
                         .HasColumnType("integer");
 
-                    b.Property<TimeOnly?>("CostTime")
+                    b.Property<TimeOnly>("CostTime")
                         .HasColumnType("time without time zone");
 
-                    b.Property<int?>("CreateBy")
+                    b.Property<int>("CreateBy")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly?>("CreateDate")
+                    b.Property<DateOnly>("CreateDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly?>("CreateTime")
+                    b.Property<TimeOnly>("CreateTime")
                         .HasColumnType("time without time zone");
 
                     b.Property<bool>("IsActive")
@@ -90,19 +94,19 @@ namespace chickko.api.Migrations
                     b.Property<bool>("IsPurchase")
                         .HasColumnType("boolean");
 
-                    b.Property<DateOnly?>("PurchaseDate")
+                    b.Property<DateOnly>("PurchaseDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly?>("PurchaseTime")
+                    b.Property<TimeOnly>("PurchaseTime")
                         .HasColumnType("time without time zone");
 
-                    b.Property<int?>("UpdateBy")
+                    b.Property<int>("UpdateBy")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly?>("UpdateDate")
+                    b.Property<DateOnly>("UpdateDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly?>("UpdateTime")
+                    b.Property<TimeOnly>("UpdateTime")
                         .HasColumnType("time without time zone");
 
                     b.HasKey("CostId");
