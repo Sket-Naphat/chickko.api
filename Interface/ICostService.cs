@@ -4,6 +4,7 @@ namespace chickko.api.Interface
 {
     public interface ICostService
     {
+        Task<List<CostDto>> GetStockCostRequest(CostDto costDto);
         Task<List<StockDto>> GetStockCostList(CostDto costDto);
         Task<List<WorktimeDto>> GetWageCostList();
         Task<List<CostDto>> GetAllCostList(CostDto costDto);

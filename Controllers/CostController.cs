@@ -46,6 +46,20 @@ namespace chickko.api.controller
             }
         }
         //new cost
+        [HttpPost("GetStockCostRequest")]
+        public async Task<IActionResult> GetStockCostRequest(CostDto costDto)
+        {
+            try
+            {
+                var result = await _costService.GetStockCostRequest(costDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("GetStockCostList")]
         public async Task<IActionResult> GetStockCostList(CostDto costDto)
         {
@@ -107,7 +121,7 @@ namespace chickko.api.controller
                 };
                 await _utilService.AddErrorLog(errorLog);
                 return BadRequest("เกิดข้อผิดพลาดในการเพิ่มต้นทุน");
-    
+
             }
         }
         [HttpPost("UpdatePurchaseCost")]

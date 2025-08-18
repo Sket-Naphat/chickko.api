@@ -83,6 +83,42 @@ namespace chickko.api.Services
         }
 
         #region Stock Cost
+
+        public async Task<List<CostDto>> GetStockCostRequest(CostDto costDto)
+        {
+            var query = _context.Cost.Include(c => c.CostStatus).Where(c => !c.IsPurchase && c.CostCategoryID == 1);
+
+            if (costDto is { CostDate: not null and var date } && date != default)
+            {
+                query = query.Where(c => c.CostDate == date);
+            }
+            //สำหรับกรองจ่ายเงินหรือยังไม่จ่ายเงิน ถ้าไม่ต้องการกรองให้ส่งค่า null
+            if (costDto.CostStatusID != null)
+            {
+                query = query.Where(c => c.CostStatusID == costDto.CostStatusID);
+            }
+            var _cost = await query.ToListAsync();
+
+            var CostDto = new List<CostDto>();
+            if (_cost != null && _cost.Count > 0)
+            {
+                foreach (var cost in _cost)
+                {
+                    CostDto.Add(new CostDto
+                    {
+                        CostID = cost.CostId,
+                        CostCategoryID = cost.CostCategoryID,
+                        CostPrice = cost.CostPrice,
+                        CostDescription = cost.CostDescription ?? "",
+                        CostDate = cost.CostDate,
+                        CostTime = cost.CostTime,
+                        CostStatusID = cost.CostStatusID,
+                        CostStatus = cost.CostStatus
+                    });
+                }
+            }
+            return CostDto;
+        }
         public async Task<List<StockDto>> GetStockCostList(CostDto costDto) //http://localhost:5036/api/stock/GetStockCostList
         {
             try
