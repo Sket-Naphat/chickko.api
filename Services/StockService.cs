@@ -24,7 +24,8 @@ namespace chickko.api.Services
                     .Include(s => s.StockCategory)
                     .Include(s => s.StockUnitType)
                     .Include(s => s.StockLocation)
-                    .Where(s => s.Active == true )
+                    .Where(s => s.Active == true)
+                    .OrderBy(s => s.ItemName)
                     .ToListAsync();
 
                 var stockDtos = stocks.Select(s => new StockDto
@@ -93,7 +94,11 @@ namespace chickko.api.Services
                     StockInQTY = StockInQTY, //จำนวนที่ต้องซื้อ
                     StockLogTypeID = 1, // 1 = Count (ขานับ)
                     Remark = stockCountDto.Remark,
-                    CostId = costId
+                    CostId = costId,
+                    SupplyID = stockCountDto.SupplyId,
+                    CreateBy = stockCountDto.UpdateBy ?? 0, // ใช้ UpdateBy ถ้ามี
+                    CreateDate = DateOnly.FromDateTime(DateTime.Now),
+                    CreateTime = TimeOnly.FromDateTime(DateTime.Now),
                 };
 
                 // 4. บันทึก StockLog ลงฐานข้อมูล

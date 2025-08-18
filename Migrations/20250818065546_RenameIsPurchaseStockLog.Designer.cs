@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250818065546_RenameIsPurchaseStockLog")]
+    partial class RenameIsPurchaseStockLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -608,10 +611,10 @@ namespace chickko.api.Migrations
                     b.Property<int>("CreateBy")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly?>("CreateDate")
+                    b.Property<DateOnly>("CreateDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly?>("CreateTime")
+                    b.Property<TimeOnly>("CreateTime")
                         .HasColumnType("time without time zone");
 
                     b.Property<int>("DipQTY")
@@ -648,7 +651,7 @@ namespace chickko.api.Migrations
                     b.Property<int>("StockLogTypeID")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("SupplyID")
+                    b.Property<int>("SupplyID")
                         .HasColumnType("integer");
 
                     b.Property<int>("TotalQTY")
@@ -657,10 +660,10 @@ namespace chickko.api.Migrations
                     b.Property<int>("UpdateBy")
                         .HasColumnType("integer");
 
-                    b.Property<DateOnly?>("UpdateDate")
+                    b.Property<DateOnly>("UpdateDate")
                         .HasColumnType("date");
 
-                    b.Property<TimeOnly?>("UpdateTime")
+                    b.Property<TimeOnly>("UpdateTime")
                         .HasColumnType("time without time zone");
 
                     b.HasKey("StockLogId");
@@ -1042,9 +1045,7 @@ namespace chickko.api.Migrations
 
                     b.HasOne("chickko.api.Models.Supplier", "Supplier")
                         .WithMany()
-                        .HasForeignKey("SupplyID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("FK_StockLog_Supplier_SupplyID");
+                        .HasForeignKey("SupplyID");
 
                     b.Navigation("Cost");
 

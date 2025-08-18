@@ -38,7 +38,7 @@ namespace chickko.api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChickkoContext).Assembly);
             // OrderHeader ↔ OrderDetail (1:N)
             modelBuilder.Entity<OrderHeader>()
                 .HasMany<OrderDetail>() // ใช้ HasMany เพื่อระบุความสัมพันธ์ 1:N

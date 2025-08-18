@@ -35,6 +35,8 @@ namespace chickko.api.Dtos
         public int? RequiredQTY { get; set; } = null; //มีไว้เผื่อแก้ไขจำนวนที่ต้องใช้
         public int? StockInQTY { get; set; } = null; //มีไว้เผื่อแก้ไขจำนวนที่ต้องซื้อมา่กกว่าปกติ
         public string Remark { get; set; } = string.Empty;
+        public int? UpdateBy { get; set; } // ID ของผู้ที่แก้ไขต้นทุน
+        public int SupplyId { get; set; } = 0;
     }
     public class StockInDto
     {

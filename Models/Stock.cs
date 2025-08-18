@@ -44,9 +44,9 @@ namespace chickko.api.Models
         public int PurchaseQTY { get; set; } = 0; //จำนวนที่ซื้อจริง
         public int DipQTY { get; set; } = 0;//จำนวนที่มันดิปกันอยู่ PurchaseQTY - StockInQTY
         public int Price { get; set; } = 0;//ราคาที่ซื้อ
-        public bool IsPurchase { get; set; } = false;
-        public int SupplyID { get; set; } = 0;
-        public Supplier? Supplier { get; set; } = null;
+        public bool IsPurchase { get; set; } = false; // ใช้เพื่อบอกว่าการซื้อเข้าเป็นการซื้อจริงหรือไม่
+        public int? SupplyID { get; set; }   // FK (nullable ตามธุรกิจ)
+        public Supplier? Supplier { get; set; } // navigation
         public string Remark { get; set; } = string.Empty;
         public int StockLogTypeID { get; set; } // 1 = Count, 2 = Purchase
         public StockLogType? StockLogType { get; set; }
@@ -54,11 +54,11 @@ namespace chickko.api.Models
         public Cost? Cost { get; set; } = null;
         public bool Active { get; set; } = true; // ใช้เพื่อบอกว่าการบันทึกนี้ยังใช้งานอยู่หรือไม่
         public int CreateBy { get; set; } // ID ของผู้ที่สร้าง log
-        public DateOnly CreateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
-        public TimeOnly CreateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
+        public DateOnly? CreateDate { get; set; }
+        public TimeOnly? CreateTime { get; set; }
         public int UpdateBy { get; set; } // ID ของผู้ที่แก้ไข log
-        public DateOnly UpdateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
-        public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
+        public DateOnly? UpdateDate { get; set; } 
+        public TimeOnly? UpdateTime { get; set; } 
     }
     public class Supplier
     {

@@ -107,6 +107,10 @@ namespace chickko.api.controller
                 UpdateTime = nowTime,
                 IsPurchase = false,
                 CostStatusID = 1,
+                CreateBy = stockCountDto.FirstOrDefault()?.UpdateBy ?? 0,
+                CreateDate = nowDate,
+                CreateTime = nowTime,
+                CostDescription = "นับ Stock รายวัน"
             };
 
             var createdCost = await _costService.CreateCostReturnCostID(addCost); // ต้อง return ค่า Cost จาก service
