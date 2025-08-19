@@ -25,9 +25,6 @@ namespace chickko.api.Models
         public string Remark { get; set; } = string.Empty;
         public bool Active { get; set; } = true;
         public int? RecentStockLogId { get; set; }
-
-        [ForeignKey("RecentStockLogId")]
-        public StockLog? RecentStockLog { get; set; }
     }
     public class StockLog //stock log model สำหรับบันทึก stock รายวัน
     {
@@ -35,20 +32,23 @@ namespace chickko.api.Models
         public int StockLogId { get; set; }
         [Required]
         public int StockId { get; set; } //stock id
-        [Required]
-        public DateOnly StockInDate { get; set; } //วันที่ซื้อเข้า
-        public TimeOnly StockInTime { get; set; } //เวลาซื้อเข้า
-        public int RequiredQTY { get; set; } = 0!;// จำนวนที่ต้องการ
-        public int TotalQTY { get; set; } = 0;// จำนวนคงเหลือ
-        public int StockInQTY { get; set; } = 0;//จำนวนที่ต้องซื้อเพิ่ม
-        public int PurchaseQTY { get; set; } = 0; //จำนวนที่ซื้อจริง
-        public int DipQTY { get; set; } = 0;//จำนวนที่มันดิปกันอยู่ PurchaseQTY - StockInQTY
-        public int Price { get; set; } = 0;//ราคาที่ซื้อ
+        [ForeignKey("StockId")]
+        public Stock? Stock { get; set; } // navigation property
+        public DateOnly? StockCountDate { get; set; } //วันที่นับสต็อก
+        public TimeOnly? StockCountTime { get; set; } //เวลานับสต็อก
+        public DateOnly? StockInDate { get; set; } //วันที่ซื้อเข้า
+        public TimeOnly? StockInTime { get; set; } //เวลาซื้อเข้า
+        public int? RequiredQTY { get; set; } = 0!;// จำนวนที่ต้องการ
+        public int? TotalQTY { get; set; } = 0;// จำนวนคงเหลือ
+        public int? StockInQTY { get; set; } = 0;//จำนวนที่ต้องซื้อเพิ่ม
+        public int? PurchaseQTY { get; set; } = 0; //จำนวนที่ซื้อจริง
+        public int? DipQTY { get; set; } = 0;//จำนวนที่มันดิปกันอยู่ PurchaseQTY - StockInQTY
+        public int? Price { get; set; } = 0;//ราคาที่ซื้อ
         public bool IsPurchase { get; set; } = false; // ใช้เพื่อบอกว่าการซื้อเข้าเป็นการซื้อจริงหรือไม่
         public int? SupplyID { get; set; }   // FK (nullable ตามธุรกิจ)
         public Supplier? Supplier { get; set; } // navigation
-        public string Remark { get; set; } = string.Empty;
-        public int StockLogTypeID { get; set; } // 1 = Count, 2 = Purchase
+        public string? Remark { get; set; } = string.Empty;
+        public int? StockLogTypeID { get; set; } // 1 = Count, 2 = Purchase
         public StockLogType? StockLogType { get; set; }
         public int CostId { get; set; }
         public Cost? Cost { get; set; } = null;

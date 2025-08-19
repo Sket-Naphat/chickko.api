@@ -50,6 +50,19 @@ namespace chickko.api.Services
             await _context.SaveChangesAsync();
             return cost;
         }
+        public async Task UpdateStockCostDate(DateOnly costDate, int costId,int UpdateBy)
+        {
+            var cost = await _context.Cost.FirstOrDefaultAsync(c => c.CostId == costId);
+            if (cost == null)
+            {
+                throw new Exception($"ไม่พบค่าใช้จ่ายที่มี ID: {costId}");
+            }
+            cost.CostDate = costDate;
+            cost.UpdateBy = UpdateBy;
+            cost.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
+            cost.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+            await _context.SaveChangesAsync();
+        }
         public async Task UpdatePurchaseCost(Cost cost)
         {
             try
@@ -97,7 +110,7 @@ namespace chickko.api.Services
             {
                 query = query.Where(c => c.CostStatusID == costDto.CostStatusID);
             }
-            var _cost = await query.ToListAsync();
+            var _cost = await query.OrderByDescending(c => c.CostDate).ThenByDescending(c => c.CostId).ToListAsync();
 
             var CostDto = new List<CostDto>();
             if (_cost != null && _cost.Count > 0)

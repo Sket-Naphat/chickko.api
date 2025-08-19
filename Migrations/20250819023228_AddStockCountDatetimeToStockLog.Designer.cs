@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250819023228_AddStockCountDatetimeToStockLog")]
+    partial class AddStockCountDatetimeToStockLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -538,6 +541,8 @@ namespace chickko.api.Migrations
 
                     b.HasKey("StockId");
 
+                    b.HasIndex("RecentStockLogId");
+
                     b.HasIndex("StockCategoryID");
 
                     b.HasIndex("StockLocationID");
@@ -669,8 +674,6 @@ namespace chickko.api.Migrations
                     b.HasKey("StockLogId");
 
                     b.HasIndex("CostId");
-
-                    b.HasIndex("StockId");
 
                     b.HasIndex("StockLogTypeID");
 
@@ -1000,6 +1003,10 @@ namespace chickko.api.Migrations
 
             modelBuilder.Entity("chickko.api.Models.Stock", b =>
                 {
+                    b.HasOne("chickko.api.Models.StockLog", "RecentStockLog")
+                        .WithMany()
+                        .HasForeignKey("RecentStockLogId");
+
                     b.HasOne("chickko.api.Models.StockCategory", "StockCategory")
                         .WithMany()
                         .HasForeignKey("StockCategoryID")
@@ -1018,6 +1025,8 @@ namespace chickko.api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("RecentStockLog");
+
                     b.Navigation("StockCategory");
 
                     b.Navigation("StockLocation");
@@ -1033,12 +1042,6 @@ namespace chickko.api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("chickko.api.Models.Stock", "Stock")
-                        .WithMany()
-                        .HasForeignKey("StockId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("chickko.api.Models.StockLogType", "StockLogType")
                         .WithMany()
                         .HasForeignKey("StockLogTypeID");
@@ -1050,8 +1053,6 @@ namespace chickko.api.Migrations
                         .HasConstraintName("FK_StockLog_Supplier_SupplyID");
 
                     b.Navigation("Cost");
-
-                    b.Navigation("Stock");
 
                     b.Navigation("StockLogType");
 

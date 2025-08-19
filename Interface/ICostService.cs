@@ -14,5 +14,6 @@ namespace chickko.api.Interface
         Task UpdateWageCost(WorktimeDto worktimeDto);
         Task<List<CostCategory>> GetCostCategoryList();
         Task UpdatePurchaseCost(Cost cost);
+        Task UpdateStockCostDate(DateOnly costDate, int costId, int UpdateBy);
     }
 }

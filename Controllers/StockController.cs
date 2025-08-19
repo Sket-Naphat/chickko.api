@@ -1,3 +1,4 @@
+using System.Globalization;
 using chickko.api.Dtos;
 using chickko.api.Interface;
 using chickko.api.Models;
@@ -37,57 +38,7 @@ namespace chickko.api.controller
                 return StatusCode(500, new { message = "เกิดข้อผิดพลาดขณะดึงข้อมูลสต็อก โปรดแจ้งพี่สเก็ต" });
             }
         }
-        #region comment
-        // [HttpPost("CreateStockCount")]
-        // public async Task<IActionResult> CreateStockCount([FromBody] List<StockCountDto> stockCountDto)
-        // {
-        //     var successList = new List<int>();
-        //     var failedList = new List<object>();
-        //     var _stockLog = new StockLog();
 
-        //     foreach (var stock in stockCountDto)
-        //     {
-        //         try
-        //         {
-        //             _stockLog = await _stockService.CreateStockCountLog(stock);
-        //             successList.Add(stock.StockId);
-        //         }
-        //         catch (Exception ex)
-        //         {
-        //             failedList.Add(new
-        //             {
-        //                 StockId = stock.StockId,
-        //                 Error = ex.Message
-        //             });
-        //         }
-        //     }
-        //     //create cost Status
-        //     if (successList.Count > 0)
-        //     {
-        //         var addCost = new Cost
-        //         {
-        //             CostCategoryID = 1,
-        //             CostPrice = 0,
-        //             CostDate = _stockLog.StockInDate,
-        //             CostTime = _stockLog.StockInTime,
-        //             UpdateDate = DateOnly.FromDateTime(DateTime.Now),
-        //             UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
-        //             IsPurchase = false,
-        //             CostStatusID = 1,
-        //         };
-        //         await _costService.CreateCost(addCost);
-        //     }
-
-        //     return Ok(new
-        //     {
-        //         message = "ผลลัพธ์การบันทึกข้อมูล",
-        //         successCount = successList.Count,
-        //         failedCount = failedList.Count,
-        //         successStockIds = successList,
-        //         failedItems = failedList
-        //     });
-        // }
-        #endregion
         [HttpPost("CreateStockCount")]
         public async Task<IActionResult> CreateStockCount([FromBody] List<StockCountDto> stockCountDto)
         {
@@ -143,6 +94,36 @@ namespace chickko.api.controller
                 failedItems = failedList
             });
         }
+        [HttpPost("UpdateStockCount")]  
+        public async Task<IActionResult> UpdateStockCount([FromBody] List<StockCountDto> stockCountDto)
+        {
+            try
+            {
+                var firstStock = stockCountDto.FirstOrDefault();
+                if (firstStock != null)
+                {
+                    // ใช้วันที่วันนี้, CostId และ UpdateBy จากรายการแรก
+                    var costDate = DateOnly.TryParseExact(firstStock.StockCountDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
+                    var costId = firstStock.CostId ?? 0;
+                    var updateBy = firstStock.UpdateBy ?? 0;
+                    if (costId != 0)
+                    {
+                        await _costService.UpdateStockCostDate(costDate, costId, updateBy);
+                    }
+                }
+                await _stockService.UpdateStockCountLog(stockCountDto);
+                return Ok(new
+                {
+                    success = true,
+                    message = "โหลดข้อมูลสำเร็จ"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Controller GetCurrentStock: {ex.Message}");
+                return StatusCode(500, new { message = "เกิดข้อผิดพลาดขณะดึงข้อมูลสต็อก โปรดแจ้งพี่สเก็ต" });
+            }
+        }
         [HttpPost("CreateStocIn")]
         public async Task<IActionResult> CreateStocIn([FromBody] List<StockInDto> stockInDto)
         {
@@ -180,6 +161,23 @@ namespace chickko.api.controller
         {
             await _stockService.UpdateStockDetail(stockDto);
             return Ok();
+        }
+        [HttpPost("GetStockCountLogByCostId")]
+        public async Task<IActionResult> GetStockCountLogByCostId([FromBody] StockInDto stockCountDto)
+        {
+            try
+            {
+                var result = await _stockService.GetStockCountLogByCostId(stockCountDto);
+                if (result == null || result.Count == 0)
+                {
+                    return NotFound(new { message = "ไม่พบข้อมูลการนับสต็อกสำหรับ Cost ID ที่ระบุ" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
