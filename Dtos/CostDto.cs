@@ -27,7 +27,12 @@ namespace chickko.api.Dtos
     }
     public class UpdateStockCostDto
     {
-        public CostDto CostDto { get; set; } = null!;
-        public List<StockDto> StockDto { get; set; } = null!;
+        public DateOnly? StockInDate { get; set; } = null!;
+        public TimeOnly? StockInTime { get; set; } = null!;
+        public double CostPrice { get; set; } = 0;
+        public int CostID { get; set; } = 0;
+        public int UpdateBy { get; set; } = 0;
+        public bool IsPurchase { get; set; } = false;
+        public string CostDescription { get; set; } = string.Empty;
     }
 }

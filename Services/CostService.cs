@@ -202,12 +202,12 @@ namespace chickko.api.Services
                 var _cost = await _context.Cost
                                     .Include(c => c.CostCategory)
                                     .Include(c => c.CostStatus)
-                                    .FirstOrDefaultAsync(c => c.CostId == updateStockCostDto.CostDto.CostID);
+                                    .FirstOrDefaultAsync(c => c.CostId == updateStockCostDto.CostID);
                 if (_cost != null)
                 {
-                    bool IsPurchase = updateStockCostDto.CostDto.IsPurchase;
-                    _cost.CostPrice = updateStockCostDto.CostDto.CostPrice;
-                    _cost.CostDescription = updateStockCostDto.CostDto.CostDescription;
+                    bool IsPurchase = updateStockCostDto.IsPurchase;
+                    _cost.CostPrice = updateStockCostDto.CostPrice;
+                    // _cost.CostDescription = updateStockCostDto.CostDescription;
 
 
                     if (IsPurchase)
@@ -221,50 +221,12 @@ namespace chickko.api.Services
                     {
                         _cost.CostStatusID = 2; //ยังไม่จ่าย
                     }
-
+                    _cost.UpdateBy = updateStockCostDto.UpdateBy;
                     _cost.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
                     _cost.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
 
-                    if (updateStockCostDto.StockDto != null)
-                    {
-                        foreach (var StockDto in updateStockCostDto.StockDto)
-                        {
-                            //ค้นหารายการแต่ละ item แล้ว loop add ค่า
-                            var _stock = await _context.Stock
-                                            .FirstOrDefaultAsync(s => s.StockId == StockDto.StockId);
-
-                            if (_stock != null)
-                            {
-                                _stock.TotalQTY = StockDto.TotalQTY + StockDto.PurchaseQTY; //จำนวนคงเหลือ
-                                _stock.Remark = StockDto.Remark;
-                                int StockInQTY = StockDto.StockInQTY - StockDto.PurchaseQTY;//หาจำนวนที่ขาด (ที่ต้องซื้อเพิ่ม)
-                                StockInQTY = (StockInQTY < 0) ? 0 : StockInQTY;
-                                _stock.StockInQTY = StockInQTY;
-                                _stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                                _stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
-
-                                if (StockDto.RecentStockLogId != null)
-                                {
-                                    var _stockLog = await _context.StockLog
-                                                         .FirstOrDefaultAsync(s => s.StockLogId == StockDto.RecentStockLogId);
-
-                                    if (_stockLog != null)
-                                    {
-                                        _stockLog.SupplyID = StockDto.SupplyId;
-                                        _stockLog.PurchaseQTY = StockDto.PurchaseQTY;
-                                        _stockLog.DipQTY = StockDto.PurchaseQTY - StockDto.StockInQTY;
-                                        _stockLog.IsPurchase = IsPurchase;
-                                        _stockLog.Price = StockDto.Price;
-
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     await _context.SaveChangesAsync();
                 }
-
 
             }
             catch (Exception ex)

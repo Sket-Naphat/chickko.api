@@ -58,12 +58,12 @@ namespace chickko.api.Services
             }
         }
 
-        public async Task<List<StockCountDto>> GetStockCountLogByCostId(StockInDto stockCountDto)
+        public async Task<GetStockCountLogByCostId> GetStockCountLogByCostId(StockInDto stockCountDto)
         {
             try
             {
                 var costId = stockCountDto.CostId;
-
+               
                 var stockLogsQuery = _context.StockLogs
                     .Include(sl => sl.Stock)
                     .ThenInclude(s => s!.StockCategory)
@@ -74,7 +74,7 @@ namespace chickko.api.Services
                     .Include(sl => sl.Cost)
                     .Where(sl => sl.Stock != null && sl.Stock.Active == true && sl.CostId == costId);
 
-                if (stockCountDto.IsStockIn == true)
+                if (stockCountDto.IsStockIn == true) //แสดงเฉพาะที่มีการสั่งซื้อ
                 {
                     stockLogsQuery = stockLogsQuery.Where(sl => sl.StockInQTY > 0);
                 }
@@ -87,8 +87,16 @@ namespace chickko.api.Services
                 var stockDtos = new List<StockCountDto>();
                 if (stockLogs == null || stockLogs.Count == 0)
                 {
-                    return stockDtos; // คืนค่าเป็นลิสต์ว่างถ้าไม่มีข้อมูล
+                    return new GetStockCountLogByCostId
+                    {
+                        CostPrice = 0,
+                        StockInDate = DateTime.Now.ToString("yyyy-MM-dd"),
+                        StockCountDtos = new List<StockCountDto>()
+                    };
                 }
+
+                var CostPrice = stockLogs.FirstOrDefault()?.Cost?.CostPrice ?? 0;
+                var StockInDate = stockLogs.FirstOrDefault()?.StockInDate?.ToString("yyyy-MM-dd") ?? DateTime.Now.ToString("yyyy-MM-dd");
                 foreach (var sl in stockLogs)
                 {
                     var dto = new StockCountDto
@@ -108,13 +116,19 @@ namespace chickko.api.Services
                         Remark = sl.Remark ?? string.Empty,
                         StockLogTypeID = sl.StockLogTypeID,
                         CostId = sl.CostId,
+                        PurchaseQTY = sl.PurchaseQTY ?? 0,
                         StockCountDate = sl.StockCountDate?.ToString("yyyy-MM-dd") ?? string.Empty,
                         StockCountTime = sl.StockCountTime?.ToString("HH:mm:ss") ?? string.Empty
                     };
                     stockDtos.Add(dto);
                 }
 
-                return stockDtos;
+                return new GetStockCountLogByCostId
+                {
+                    CostPrice = CostPrice,
+                    StockInDate = StockInDate ?? DateTime.Now.ToString("yyyy-MM-dd"),
+                    StockCountDtos = stockDtos
+                };
             }
             catch (Exception ex)
             {
@@ -190,52 +204,59 @@ namespace chickko.api.Services
             // 1. ดึง Stock หลักจาก DB โดยใช้ StockId ที่ผู้ใช้ส่งมา
 
         }
-        public async Task CreateStocInLog(StockInDto stockInDto)
+        public async Task CreateStockIn(StockInDto stockInDto)
         {
             // 1. ดึง Stock หลักจาก DB โดยใช้ StockId ที่ผู้ใช้ส่งมา
-            var stock = await _context.Stocks.FindAsync(stockInDto.StockId)
-                ?? throw new Exception($"ไม่พบ Stock ID: {stockInDto.StockId}");
-
-            // 2. แปลงวันที่และเวลาให้อยู่ในรูปแบบ DateOnly และ TimeOnly
-            var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
-            var time = TimeOnly.Parse(stockInDto.StockInTime);
-
-            int DipQTY = stockInDto.PurchaseQTY - stockInDto.StockInQTY; //จำนวนที่สั่ง กับที่ซื้อจีิง
-
-            int StockInQTY = stockInDto.StockInQTY - stockInDto.PurchaseQTY;
-            StockInQTY = (StockInQTY < 0) ? 0 : StockInQTY;
-
-            // 3. สร้าง StockLog ใหม่สำหรับบันทึกการ "ซื้อเข้า"
-            var stockLog = new StockLog
+            try
             {
-                StockId = stock.StockId,
-                StockInDate = date,
-                StockInTime = time,
-                StockInQTY = stockInDto.StockInQTY, //จำนวนที่ต้องซื้อเพิ่ม
-                PurchaseQTY = stockInDto.PurchaseQTY,
-                DipQTY = DipQTY,
-                Price = stockInDto.Price,
-                SupplyID = stockInDto.SupplyId,
-                RequiredQTY = stock.RequiredQTY, // จำนวนที่ต้องการ
-                TotalQTY = stock.TotalQTY + stockInDto.PurchaseQTY, // คำนวณยอดคงเหลือใหม่
-                StockLogTypeID = 2, // 2 = Purchase (ซื้อเข้า)
-                Remark = stockInDto.Remark,
-                IsPurchase = true
-            };
+                var stockLog = await _context.StockLogs.FirstOrDefaultAsync(log => log.StockLogId == stockInDto.StockLogId)
+                    ?? throw new Exception($"ไม่พบ StockLog ID: {stockInDto.StockLogId}");
 
-            // 4. บันทึก StockLog ลงฐานข้อมูล
-            _context.StockLogs.Add(stockLog);
-            await _context.SaveChangesAsync();
+                // 2. แปลงวันที่และเวลาให้อยู่ในรูปแบบ DateOnly และ TimeOnly
+                var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
+                var time = TimeOnly.TryParse(stockInDto.StockInTime, out var parsedTime) ? parsedTime : TimeOnly.FromDateTime(DateTime.Now);
+                int dipQTY = stockInDto.PurchaseQTY - stockInDto.StockInQTY;
 
-            // 5. อัปเดต Stock หลักให้เพิ่มจำนวนที่ซื้อเข้ามา
-            stock.StockInQTY = StockInQTY; //หักกับจำนวนที่ซื้อเข้ามาแล้ว
-            stock.TotalQTY = stockLog.TotalQTY ?? 0; // อัปเดตยอดคงเหลือ
-            stock.UpdateDate = date;
-            stock.UpdateTime = time;
-            stock.RecentStockLogId = stockLog.StockLogId;
+                // 3. update StockLog
+                if (stockInDto.Price > 0)
+                {
+                    stockLog.Price = stockInDto.Price;
+                    //await UpdateStockCostUnit(stockInDto.StockId, stockInDto.Price);
+                }
+                stockLog.StockInDate = date;
+                stockLog.StockInTime = time;
+                stockLog.PurchaseQTY = stockInDto.PurchaseQTY;
+                stockLog.DipQTY = dipQTY;
+                stockLog.IsPurchase = stockInDto.IsPurchase;
+                stockLog.Remark = stockInDto.Remark;
+                stockLog.SupplyID = stockInDto.SupplyId;
+                stockLog.StockLogTypeID = 2;
+                stockLog.UpdateBy = stockInDto.UpdateBy ?? 0;
+                stockLog.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                stockLog.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
 
-            // 6. บันทึกการอัปเดต Stock
-            await _context.SaveChangesAsync();
+                // ไม่ควร Add ใหม่ ให้ใช้ Update
+                _context.StockLogs.Update(stockLog);
+                await _context.SaveChangesAsync();
+
+                // 5. อัปเดต Stock หลักให้เพิ่มจำนวนที่ซื้อเข้ามา
+                var stock = await _context.Stocks.FindAsync(stockLog.StockId)
+                    ?? throw new Exception($"ไม่พบ Stock ID: {stockLog.StockId}");
+
+                stock.TotalQTY += stockInDto.PurchaseQTY;
+                stock.StockInQTY = Math.Max(0, stock.RequiredQTY - stock.TotalQTY); // คำนวณ StockInQTY ใหม่ ถ้า TotalQTY น้อยกว่า RequiredQTY จะเป็น 0
+                stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                stock.RecentStockLogId = stockLog.StockLogId;
+
+                _context.Stocks.Update(stock);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in CreateStockIn");
+                throw;
+            }
         }
         public async Task UpdateStockDetail(StockDto stockDto)
         {
@@ -268,7 +289,7 @@ namespace chickko.api.Services
                     var stockLog = await _context.StockLogs.FirstOrDefaultAsync(sl => sl.StockLogId == stock.StockLogId)
                         ?? throw new Exception($"ไม่พบ StockLog ID: {stock.StockLogId}");
 
-                    
+
                     stockLog.StockId = stock.StockId;
                     stockLog.StockCountDate = date;
                     stockLog.StockCountTime = time;
@@ -292,6 +313,27 @@ namespace chickko.api.Services
                 throw; // หรือจะ return BadRequest ก็ได้
             }
 
+        }
+        public async Task UpdateStockCostUnit(int StockId, int StockUnitPrice)
+        {
+            try
+            {
+                var stock = await _context.Stocks.FirstOrDefaultAsync(s => s.StockId == StockId)
+                    ?? throw new Exception($"ไม่พบ Stock ID: {StockId}");
+
+                stock.StockUnitTypeID = StockUnitPrice;
+                stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+
+                _context.Stocks.Update(stock);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+                Console.WriteLine("Inner: " + ex.InnerException?.Message);
+                throw; // หรือจะ return BadRequest ก็ได้
+            }    
         }
     }
 }

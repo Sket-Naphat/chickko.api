@@ -12,6 +12,7 @@ public class OrdersService : IOrdersService
     private readonly ChickkoContext _context;
     private readonly ILogger<OrdersService> _logger;
     private readonly IUtilService _utilService;
+    private readonly IMenuService _menuService;
 
 
     // public class MockDocument
@@ -22,11 +23,12 @@ public class OrdersService : IOrdersService
 
     //     public Dictionary<string, object> ToDictionary() => Data;
     // }
-    public OrdersService(ChickkoContext context, ILogger<OrdersService> logger, IUtilService utilService)
+    public OrdersService(ChickkoContext context, ILogger<OrdersService> logger, IUtilService utilService, IMenuService menuService)
     {
         _context = context;
         _logger = logger;
         _utilService = utilService;
+        _menuService = menuService;
     }
 
     // ✅ คุณต้องเขียนเองให้เชื่อมกับ Firestore SDK
@@ -146,8 +148,14 @@ public class OrdersService : IOrdersService
                         var menu = _context.Menus.FirstOrDefault(x => x.MenuIdInFirestore == baseItemID);
                         if (menu == null)
                         {
-                            _logger.LogWarning($"ไม่พบเมนูหลักชื่อ '{baseItemID}' ในฐานข้อมูล");
-                            continue;
+                            // _logger.LogWarning($"ไม่พบเมนูหลักชื่อ '{baseItemID}' ในฐานข้อมูล");
+                            // continue;
+                            menu = await _menuService.CopyMenusFromFirestoreByID(baseItemID);
+                            if (menu == null)
+                            {
+                                _logger.LogWarning($"ไม่พบเมนูหลักชื่อ '{baseItemID}' ในฐานข้อมูล และไม่สามารถคัดลอกได้");
+                                continue;
+                            }
                         }
                         _context.Attach(menu); // ป้องกัน EF เพิ่มซ้ำ
 

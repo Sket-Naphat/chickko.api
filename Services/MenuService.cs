@@ -1,3 +1,4 @@
+using System.Linq;
 using chickko.api.Data;
 using chickko.api.Interface;
 using chickko.api.Models;
@@ -132,6 +133,52 @@ namespace chickko.api.Services
             {
                 _logger.LogError(ex, "เกิดข้อผิดพลาดในการคัดลอกเมนูจาก Firestore");
                 return "เกิดข้อผิดพลาดในการคัดลอกเมนู";
+            }
+        }
+
+        public async Task<Menu> CopyMenusFromFirestoreByID(string firebaseMenuID)
+        {
+            try
+            {
+                var snapshot = await _utilService.GetSnapshotFromFirestoreWithID("menu", firebaseMenuID);
+            if (snapshot == null || snapshot.Documents.Count == 0) return new Menu();
+
+            var doc = snapshot.Documents.First();
+            var data = doc.ToDictionary();
+            var categoryName = data.ContainsKey("category") ? data["category"]?.ToString() ?? "" : "";
+            var _Category = await _context.Categories.FirstOrDefaultAsync(x => x.CategoryInFirestore == categoryName);
+            if (_Category == null) return new Menu();
+
+            // ตรวจสอบว่ามีเมนูนี้ในฐานข้อมูลหรือยัง
+            var existingMenu = await _context.Menus.FirstOrDefaultAsync(m => m.MenuIdInFirestore == doc.Id);
+            if (existingMenu != null)
+            {
+                // ถ้ามีอยู่แล้ว ให้ return เมนูนั้นกลับไป
+                return existingMenu;
+            }
+
+            var menu = new Menu
+            {
+                MenuIdInFirestore = doc.Id,
+                Name = data.ContainsKey("name") ? data["name"]?.ToString() ?? "" : "",
+                Price = data.ContainsKey("price") ? Convert.ToDecimal(data["price"]) : 0,
+                Cost = data.ContainsKey("cost") ? Convert.ToDecimal(data["cost"]) : 0,
+                ImageUrl = data.ContainsKey("imgPath") ? data["imgPath"]?.ToString() ?? "" : "",
+                Active = data.ContainsKey("active") ? Convert.ToBoolean(data["active"]) : false,
+                IsTopping = data.ContainsKey("addTopping") ? Convert.ToBoolean(data["addTopping"]) : false,
+                CategoryId = _Category.CategoryId,
+                Category = _Category
+            };
+
+            _context.Menus.Add(menu);
+            await _context.SaveChangesAsync();
+
+            return menu;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการคัดลอกเมนูจาก Firestore");
+                return new Menu();
             }
         }
     }

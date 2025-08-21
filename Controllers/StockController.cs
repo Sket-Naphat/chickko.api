@@ -45,6 +45,12 @@ namespace chickko.api.controller
             var successList = new List<int>();
             var failedList = new List<object>();
             var _stockLog = new StockLog();
+            var firstStock = stockCountDto.FirstOrDefault();
+            var costDate = DateOnly.FromDateTime(DateTime.Now);
+            if (firstStock != null)
+            {
+                costDate = DateOnly.TryParseExact(firstStock.StockCountDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
+            }
 
             var nowDate = DateOnly.FromDateTime(DateTime.Now);
             var nowTime = TimeOnly.FromDateTime(DateTime.Now);
@@ -52,7 +58,7 @@ namespace chickko.api.controller
             {
                 CostCategoryID = 1,
                 CostPrice = 0,
-                CostDate = nowDate,
+                CostDate = costDate,
                 CostTime = nowTime,
                 UpdateDate = nowDate,
                 UpdateTime = nowTime,
@@ -94,7 +100,7 @@ namespace chickko.api.controller
                 failedItems = failedList
             });
         }
-        [HttpPost("UpdateStockCount")]  
+        [HttpPost("UpdateStockCount")]
         public async Task<IActionResult> UpdateStockCount([FromBody] List<StockCountDto> stockCountDto)
         {
             try
@@ -124,17 +130,21 @@ namespace chickko.api.controller
                 return StatusCode(500, new { message = "เกิดข้อผิดพลาดขณะดึงข้อมูลสต็อก โปรดแจ้งพี่สเก็ต" });
             }
         }
-        [HttpPost("CreateStocIn")]
-        public async Task<IActionResult> CreateStocIn([FromBody] List<StockInDto> stockInDto)
+        [HttpPost("CreateStockIn")]
+        public async Task<IActionResult> CreateStockIn(UpdateStockInCostDto updateStockInCostDto)
         {
             var successList = new List<int>();
             var failedList = new List<object>();
+            var IsPurchase = updateStockInCostDto.UpdateStockCostDto.IsPurchase;
+            var UpdateBy = updateStockInCostDto.UpdateStockCostDto.UpdateBy;
 
-            foreach (var stock in stockInDto)
+            foreach (var stock in updateStockInCostDto.StockInDto)
             {
                 try
                 {
-                    await _stockService.CreateStocInLog(stock);
+                    stock.IsPurchase = IsPurchase;
+                    stock.UpdateBy = UpdateBy;
+                    await _stockService.CreateStockIn(stock);
                     successList.Add(stock.StockId);
                 }
                 catch (Exception ex)
@@ -146,6 +156,8 @@ namespace chickko.api.controller
                     });
                 }
             }
+            // Update cost information
+            await _costService.UpdateStockCost(updateStockInCostDto.UpdateStockCostDto);
 
             return Ok(new
             {
@@ -168,7 +180,7 @@ namespace chickko.api.controller
             try
             {
                 var result = await _stockService.GetStockCountLogByCostId(stockCountDto);
-                if (result == null || result.Count == 0)
+                if (result == null || result.StockCountDtos.Count == 0)
                 {
                     return NotFound(new { message = "ไม่พบข้อมูลการนับสต็อกสำหรับ Cost ID ที่ระบุ" });
                 }
