@@ -57,8 +57,8 @@ namespace chickko.api.Models
         public DateOnly? CreateDate { get; set; }
         public TimeOnly? CreateTime { get; set; }
         public int UpdateBy { get; set; } // ID ของผู้ที่แก้ไข log
-        public DateOnly? UpdateDate { get; set; } 
-        public TimeOnly? UpdateTime { get; set; } 
+        public DateOnly? UpdateDate { get; set; }
+        public TimeOnly? UpdateTime { get; set; }
     }
     public class Supplier
     {
@@ -97,5 +97,18 @@ namespace chickko.api.Models
         public int StockLogTypeID { get; set; }
         public string StockLogTypeName { get; set; } = ""!;
         public string Description { get; set; } = "";
+    }
+
+    public class StockUnitCostHistory
+    {
+        [Key]
+        public int StockUnitCostHistoryID { get; set; }
+        public int StockId { get; set; }
+        public Stock? Stock { get; set; } = null!;
+        public double CostPrice { get; set; } = 0;
+        public DateOnly? EffectiveDate { get; set; } = null!;
+        public int CreatedBy { get; set; }
+        public DateOnly? CreatedDate { get; set; }
+        public TimeOnly? CreatedTime { get; set; }
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250821105757_AddStockUnitCostHistory")]
+    partial class AddStockUnitCostHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -700,39 +703,6 @@ namespace chickko.api.Migrations
                     b.ToTable("StockLogType");
                 });
 
-            modelBuilder.Entity("chickko.api.Models.StockUnitCostHistory", b =>
-                {
-                    b.Property<int>("StockUnitCostHistoryID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("StockUnitCostHistoryID"));
-
-                    b.Property<double>("CostPrice")
-                        .HasColumnType("double precision");
-
-                    b.Property<int>("CreatedBy")
-                        .HasColumnType("integer");
-
-                    b.Property<DateOnly?>("CreatedDate")
-                        .HasColumnType("date");
-
-                    b.Property<TimeOnly?>("CreatedTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<DateOnly?>("EffectiveDate")
-                        .HasColumnType("date");
-
-                    b.Property<int>("StockId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("StockUnitCostHistoryID");
-
-                    b.HasIndex("StockId");
-
-                    b.ToTable("StockUnitCostHistory");
-                });
-
             modelBuilder.Entity("chickko.api.Models.StockUnitType", b =>
                 {
                     b.Property<int>("StockUnitTypeID")
@@ -1089,17 +1059,6 @@ namespace chickko.api.Migrations
                     b.Navigation("StockLogType");
 
                     b.Navigation("Supplier");
-                });
-
-            modelBuilder.Entity("chickko.api.Models.StockUnitCostHistory", b =>
-                {
-                    b.HasOne("chickko.api.Models.Stock", "Stock")
-                        .WithMany()
-                        .HasForeignKey("StockId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Stock");
                 });
 
             modelBuilder.Entity("chickko.api.Models.User", b =>

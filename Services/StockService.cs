@@ -221,7 +221,7 @@ namespace chickko.api.Services
                 if (stockInDto.Price > 0)
                 {
                     stockLog.Price = stockInDto.Price;
-                    //await UpdateStockCostUnit(stockInDto.StockId, stockInDto.Price);
+                    await UpdateStockCostUnit(stockInDto.StockId, stockInDto.Price, stockInDto.UpdateBy ?? 0);
                 }
                 stockLog.StockInDate = date;
                 stockLog.StockInTime = time;
@@ -258,6 +258,8 @@ namespace chickko.api.Services
                 throw;
             }
         }
+
+
         public async Task UpdateStockDetail(StockDto stockDto)
         {
             try
@@ -314,18 +316,49 @@ namespace chickko.api.Services
             }
 
         }
-        public async Task UpdateStockCostUnit(int StockId, int StockUnitPrice)
+        public async Task UpdateStockCostUnit(int StockId, int StockUnitPrice, int UpdateBy)
         {
             try
             {
-                var stock = await _context.Stocks.FirstOrDefaultAsync(s => s.StockId == StockId)
-                    ?? throw new Exception($"ไม่พบ Stock ID: {StockId}");
+                var StockUnitCostHistory = await _context.StockUnitCostHistory
+                    .Where(s => s.StockId == StockId)
+                    .OrderByDescending(s => s.EffectiveDate)
+                    .FirstOrDefaultAsync();
 
-                stock.StockUnitTypeID = StockUnitPrice;
-                stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                if (StockUnitCostHistory == null)
+                {
+                    StockUnitCostHistory = new StockUnitCostHistory
+                    {
+                        StockId = StockId,
+                        CostPrice = StockUnitPrice,
+                        EffectiveDate = DateOnly.FromDateTime(DateTime.Now),
+                        CreatedBy = UpdateBy, // หรือกำหนดค่าอื่นตามที่ต้องการ
+                        CreatedDate = DateOnly.FromDateTime(DateTime.Now),
+                        CreatedTime = TimeOnly.FromDateTime(DateTime.Now)
+                    };
+                    _context.StockUnitCostHistory.Add(StockUnitCostHistory);
+                }
+                else if (StockUnitCostHistory.CostPrice != StockUnitPrice)
+                {
+                    // ถ้าราคาใหม่สูงกว่าราคาเดิม ให้สร้างรายการใหม่
+                    var newCostHistory = new StockUnitCostHistory
+                    {
+                        StockId = StockId,
+                        CostPrice = StockUnitPrice,
+                        EffectiveDate = DateOnly.FromDateTime(DateTime.Now),
+                        CreatedBy = UpdateBy,
+                        CreatedDate = DateOnly.FromDateTime(DateTime.Now),
+                        CreatedTime = TimeOnly.FromDateTime(DateTime.Now)
+                    };
+                    _context.StockUnitCostHistory.Add(newCostHistory);
+                }
+                else if (StockUnitCostHistory.CostPrice == StockUnitPrice)
+                {
+                    // ถ้าไม่มีการเปลี่ยนแปลงราคา ไม่ต้องทำอะไร
+                    return;
+                }
 
-                _context.Stocks.Update(stock);
+                _context.StockUnitCostHistory.Update(StockUnitCostHistory);
                 await _context.SaveChangesAsync();
             }
             catch (Exception ex)

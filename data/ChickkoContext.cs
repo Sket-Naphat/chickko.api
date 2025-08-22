@@ -12,7 +12,7 @@ namespace chickko.api.Data
 
         public DbSet<Menu> Menus { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
-         public DbSet<UserPermistion> UserPermistion { get; set; } = null!;
+        public DbSet<UserPermistion> UserPermistion { get; set; } = null!;
         public DbSet<OrderHeader> OrderHeaders { get; set; }
         public DbSet<OrderDetail> OrderDetails { get; set; }
         public DbSet<Ordertype> Ordertypes { get; set; }
@@ -35,6 +35,7 @@ namespace chickko.api.Data
         public DbSet<StockUnitType> StockUnitType { get; set; } = null!;
         public DbSet<StockLocation> StockLocation { get; set; } = null!;
         public DbSet<StockLogType> StockLogType { get; set; } = null!;
+        public DbSet<StockUnitCostHistory> StockUnitCostHistory { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
