@@ -358,7 +358,6 @@ namespace chickko.api.Services
                     return;
                 }
 
-                _context.StockUnitCostHistory.Update(StockUnitCostHistory);
                 await _context.SaveChangesAsync();
             }
             catch (Exception ex)
