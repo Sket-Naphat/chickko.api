@@ -17,35 +17,26 @@ namespace chickko.api.Controllers
         }
 
         [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest request)
+        public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var loginUser = _authService.Login(request.Username, request.Password);
-            if (loginUser == null)
-                return Unauthorized("Invalid username or password");
-
-            var token = _authService.GenerateJwtToken(loginUser);
-            return Ok(new
-            {
-                token,
-                userId = loginUser.UserId,
-                name = loginUser.Name,
-                userPermissionId = loginUser.UserPermistionID
-            });
+            // site อ่านผ่าน Header โดย SiteService แล้ว ไม่ต้องรับจาก body
+            var result = await _authService.LoginAsync(request.Username, request.Password);
+            return Ok(result);
         }
 
-        [HttpPost("register")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-        {
-            try
-            {
-                var user = await _authService.Register(request);
-                return Ok(user);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+        // [HttpPost("register")]
+        // [AllowAnonymous]
+        // public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        // {
+        //     try
+        //     {
+        //         var user = await _authService.Register(request);
+        //         return Ok(user);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         return BadRequest(new { message = ex.Message });
+        //     }
+        // }
     }
 }

@@ -8,6 +8,7 @@ namespace chickko.api.Models
         public string Username { get; set; } = null!;
         public string Password { get; set; } = null!;
         public string Name { get; set; } = null!;
+        public string Site { get; set; } = "HKT"; // เพิ่ม: HKT หรือ BKK
         public DateTime DateOfBirth { get; set; } // วันเกิดของผู้ใช้
         public DateTime StartWorkDate { get; set; } = DateTime.UtcNow; // วันที่เริ่มทำงาน
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // วันที่สร้างผู้ใช้
@@ -43,6 +44,7 @@ namespace chickko.api.Models
 
         [Required(ErrorMessage = "Start Work Date is required")]
         public DateTime StartWorkDate { get; set; } = DateTime.UtcNow;
+        public string? Site { get; set; } // เพิ่ม: HKT หรือ BKK (ถ้ามี)
     }
 
 }

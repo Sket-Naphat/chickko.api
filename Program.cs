@@ -10,8 +10,18 @@ builder.Services.AddControllers(); // ⭐️ Enable Controllers API
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<ChickkoContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+// เพิ่มเพื่ออ่าน HttpContext
+builder.Services.AddHttpContextAccessor();
+
+// เพิ่ม SiteService
+builder.Services.AddScoped<ISiteService, SiteService>();
+
+// เปลี่ยน AddDbContext: ใช้ connection string ตาม Site (แทน DefaultConnection เดิม)
+builder.Services.AddDbContext<ChickkoContext>((sp, options) =>
+{
+    var siteService = sp.GetRequiredService<ISiteService>();
+    options.UseNpgsql(siteService.GetConnectionString());
+});
 
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
