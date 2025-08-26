@@ -19,6 +19,25 @@ namespace chickko.api.controller
             _stockService = stockService;
             _costService = costService;
         }
+        [HttpGet("GetAllStockItem")]
+        public async Task<IActionResult> GetAllStockItem()
+        {
+            try
+            {
+                var result = await _stockService.GetAllStockItem();
+                return Ok(new
+                {
+                    success = true,
+                    data = result,
+                    message = "โหลดข้อมูลสำเร็จ"
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Controller GetAllStockItem: {ex.Message}");
+                return StatusCode(500, new { message = "เกิดข้อผิดพลาดขณะดึงข้อมูลสต็อก โปรดแจ้งพี่สเก็ต" });
+            }
+        }
         [HttpGet("GetCurrentStock")]
         public async Task<IActionResult> GetCurrentStock()
         {
@@ -183,6 +202,58 @@ namespace chickko.api.controller
                 if (result == null || result.StockCountDtos.Count == 0)
                 {
                     return NotFound(new { message = "ไม่พบข้อมูลการนับสต็อกสำหรับ Cost ID ที่ระบุ" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("GetStockUnitType")]
+        public async Task<IActionResult> GetStockUnitType()
+        {
+            try
+            {
+                var result = await _stockService.GetStockUnitType();
+                if (result == null || result.Count == 0)
+                {
+                    return NotFound(new { message = "ไม่พบข้อมูลหมวดหมู่สินค้า" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpGet("GetStockLocation")]
+        public async Task<IActionResult> GetStockLocation()
+        {
+            try
+            {
+                var result = await _stockService.GetStockLocation();
+                if (result == null || result.Count == 0)
+                {
+                    return NotFound(new { message = "ไม่พบข้อมูลสถานที่จัดเก็บสินค้า" });
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpGet("GetStockCategory")]
+        public async Task<IActionResult> GetStockCategory()
+        {
+            try
+            {
+                var result = await _stockService.GetStockCategory();
+                if (result == null || result.Count == 0)
+                {
+                    return NotFound(new { message = "ไม่พบข้อมูลหมวดหมู่สินค้า" });
                 }
                 return Ok(result);
             }

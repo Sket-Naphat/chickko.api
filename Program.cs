@@ -62,11 +62,12 @@ builder.Services.AddCors(options =>
                     return
                         host.EndsWith(".vercel.app") ||                 // vercel preview ทั้งหมด
                         origin == "https://chickko-pos.vercel.app" ||   // vercel prod
-                        origin == "https://chickkoapp.web.app"   ||     // firebase (ถ้ามี)
-                        origin.StartsWith("http://localhost:")   ||     // dev http (vite ส่วนใหญ่ 5173/4173)
-                        origin.StartsWith("https://localhost:")  ||     // dev https (เผื่อมี)
-                        origin.StartsWith("http://127.0.0.1:")   ||
-                        origin.StartsWith("https://127.0.0.1:");
+                        origin == "https://chickkoapp.web.app" ||     // firebase (ถ้ามี)
+                        origin.StartsWith("http://localhost:") ||     // dev http (vite ส่วนใหญ่ 5173/4173)
+                        origin.StartsWith("https://localhost:") ||     // dev https (เผื่อมี)
+                        origin.StartsWith("http://127.0.0.1:") ||
+                        origin.StartsWith("https://127.0.0.1:") ||
+                        origin.StartsWith("http://localhost:5173");
                 }
                 catch { return false; }
             })

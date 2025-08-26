@@ -6,11 +6,14 @@ namespace chickko.api.Interface
     public interface IStockService
     {
         Task<List<StockDto>> GetCurrentStock();
+        Task<List<StockDto>> GetAllStockItem();
         Task<StockLog> CreateStockCountLog(StockCountDto stockCountDto, int costId);
         Task UpdateStockCountLog(List<StockCountDto> stockCountDto);
         Task CreateStockIn(StockInDto stockInDto);
         Task UpdateStockDetail(StockDto stockDto);
         Task<GetStockCountLogByCostId> GetStockCountLogByCostId(StockInDto stockCountDto);
-
+        Task<List<StockUnitType>> GetStockUnitType();
+        Task<List<StockLocation>> GetStockLocation();
+        Task<List<StockCategory>> GetStockCategory();
     }
 }

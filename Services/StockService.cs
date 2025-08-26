@@ -16,6 +16,93 @@ namespace chickko.api.Services
             _context = context;
             _logger = logger;
         }
+        public async Task<List<StockUnitType>> GetStockUnitType()
+        {
+            try
+            {
+                var stockUnitTypes = await _context.StockUnitType
+                    .OrderBy(stockUnitType => stockUnitType.StockUnitTypeName)
+                    .ToListAsync();
+
+                return stockUnitTypes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"[ERROR] GetStockUnitType: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<List<StockLocation>> GetStockLocation()
+        {
+            try
+            {
+                var stockLocations = await _context.StockLocation
+                    .OrderBy(stockLocation => stockLocation.StockLocationName)
+                    .ToListAsync();
+
+                return stockLocations;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"[ERROR] GetStockLocation: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<List<StockCategory>> GetStockCategory()
+        {
+            try
+            {
+                var stockCategories = await _context.StockCategory
+                    .OrderBy(stockCategory => stockCategory.StockCategoryName)
+                    .ToListAsync();
+
+                return stockCategories;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"[ERROR] GetStockCategory: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<List<StockDto>> GetAllStockItem()
+        {
+            try
+            {
+                var stocks = await _context.Stocks
+                    .Include(s => s.StockCategory)
+                    .Include(s => s.StockUnitType)
+                    .Include(s => s.StockLocation)
+                    .OrderBy(s => s.ItemName)
+                    .ToListAsync();
+
+                var stockDtos = stocks.Select(s => new StockDto
+                {
+                    StockId = s.StockId,
+                    ItemName = s.ItemName,
+                    StockCategoryID = s.StockCategoryID,
+                    StockCategoryName = s.StockCategory!.StockCategoryName,
+                    StockUnitTypeID = s.StockUnitTypeID,
+                    StockUnitTypeName = s.StockUnitType!.StockUnitTypeName,
+                    StockLocationID = s.StockLocationID,
+                    StockLocationName = s.StockLocation!.StockLocationName,
+                    TotalQTY = s.TotalQTY,
+                    RequiredQTY = s.RequiredQTY,
+                    StockInQTY = s.StockInQTY,
+                    Remark = s.Remark,
+                    Active = s.Active
+                }).ToList();
+
+                return stockDtos;
+            }
+            catch (Exception ex)
+            {
+                // 🔴 Log หรือแจ้ง error ที่นี่ตามเหมาะสม
+                Console.WriteLine($"[ERROR] GetCurrentStock: {ex.Message}");
+
+                // หรือโยนต่อไปให้ controller จัดการ (ถ้าคุณใช้ error middleware อยู่)
+                throw;
+            }
+        }
         public async Task<List<StockDto>> GetCurrentStock()
         {
             try
@@ -63,7 +150,7 @@ namespace chickko.api.Services
             try
             {
                 var costId = stockCountDto.CostId;
-               
+
                 var stockLogsQuery = _context.StockLogs
                     .Include(sl => sl.Stock)
                     .ThenInclude(s => s!.StockCategory)
@@ -267,8 +354,39 @@ namespace chickko.api.Services
                 var stock = await _context.Stocks.FindAsync(stockDto.StockId)
                 ?? throw new Exception($"ไม่พบ Stock ID: {stockDto.StockId}");
 
-                stock.ItemName = stockDto.ItemName;
-                stock.StockLocationID = stockDto.StockLocationID;
+                if (stockDto.ItemName != null)
+                {
+                    stock.ItemName = stockDto.ItemName;
+                }
+                if (stockDto.RequiredQTY > 0)
+                {
+                    stock.RequiredQTY = stockDto.RequiredQTY;
+                }
+                if (stockDto.Remark != null)
+                {
+                    stock.Remark = stockDto.Remark;
+                }
+                if (stockDto.StockInQTY > 0)
+                {
+                    stock.StockInQTY = stockDto.StockInQTY;
+                }
+                if (stockDto.StockLocationID > 0)
+                {
+                    stock.StockLocationID = stockDto.StockLocationID;
+                }
+                if (stockDto.StockCategoryID > 0)
+                {
+                    stock.StockCategoryID = stockDto.StockCategoryID;
+                }
+                if (stockDto.StockUnitTypeID > 0)
+                {
+                    stock.StockUnitTypeID = stockDto.StockUnitTypeID;
+                }
+                if (stockDto.TotalQTY > 0)
+                {
+                    stock.TotalQTY = stockDto.TotalQTY;
+                }
+                stock.Active = stockDto.Active;
 
                 await _context.SaveChangesAsync();
             }
@@ -365,7 +483,7 @@ namespace chickko.api.Services
                 Console.WriteLine("Error: " + ex.Message);
                 Console.WriteLine("Inner: " + ex.InnerException?.Message);
                 throw; // หรือจะ return BadRequest ก็ได้
-            }    
+            }
         }
     }
 }

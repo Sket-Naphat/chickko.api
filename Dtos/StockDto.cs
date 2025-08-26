@@ -22,6 +22,7 @@ namespace chickko.api.Dtos
         public int? RecentStockLogId { get; set; }
         public int SupplyId { get; set; } = 0;
         public int Price { get; set; } = 0;
+        public bool Active { get; set; } = false; // ใช้เพื่อบอกว่าการบันทึกนี้ยังใช้งานอยู่หรือไม่
     }
     public class StockCountDto
     {
