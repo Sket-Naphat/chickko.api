@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using chickko.api.Services;
 using chickko.api.Interface;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,9 @@ builder.Services.AddScoped<IUtilService, UtilService>(); // เพิ่ม IUti
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<ICostService, CostService>();
 builder.Services.AddScoped<IWorktimeService, WorktimeService>();
+
+// เพิ่ม FirestoreService เพื่อใช้ในการเชื่อมต่อกับ Firestore
+builder.Services.AddScoped<FirestoreService>();
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication("Bearer")
@@ -75,14 +79,8 @@ builder.Services.AddCors(options =>
     );
 });
 
-var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
-
-if (!string.IsNullOrEmpty(credentialsJson))
-{
-    var filePath = Path.Combine(Path.GetTempPath(), "gcp-credentials.json");
-    File.WriteAllText(filePath, credentialsJson);
-    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
-}
+// Set default culture
+// Set default culture
 CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
 CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-US");
 

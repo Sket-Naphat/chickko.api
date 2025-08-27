@@ -15,11 +15,11 @@ namespace chickko.api.Services
         private FirestoreDb GetFirestoreDb()
         {
             //local
-            Environment.SetEnvironmentVariable(
-                "GOOGLE_APPLICATION_CREDENTIALS",
-                Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
-            );
-            Console.WriteLine("🔥 GOOGLE_APPLICATION_CREDENTIALS = " + Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
+            // Environment.SetEnvironmentVariable(
+            //     "GOOGLE_APPLICATION_CREDENTIALS",
+            //     Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
+            // );
+            // Console.WriteLine("🔥 GOOGLE_APPLICATION_CREDENTIALS = " + Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
 
             return FirestoreDb.Create("chickkoapp");
         }

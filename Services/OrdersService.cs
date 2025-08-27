@@ -4,6 +4,7 @@ using chickko.api.Data;
 using chickko.api.Interface;
 using chickko.api.Models;
 using chickko.api.Services;
+using Google.Api;
 using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
@@ -11,40 +12,31 @@ public class OrdersService : IOrdersService
 {
     private readonly ChickkoContext _context;
     private readonly ILogger<OrdersService> _logger;
-    private readonly IUtilService _utilService;
     private readonly IMenuService _menuService;
+    private readonly FirestoreService _firestoreService;
 
-
-    // public class MockDocument
-    // {
-    //     [Key]
-    //     public int Id { get; set; }
-    //     public Dictionary<string, object> Data { get; set; } = new Dictionary<string, object> { };
-
-    //     public Dictionary<string, object> ToDictionary() => Data;
-    // }
-    public OrdersService(ChickkoContext context, ILogger<OrdersService> logger, IUtilService utilService, IMenuService menuService)
+    public OrdersService(
+        ChickkoContext context,
+        ILogger<OrdersService> logger,
+        IMenuService menuService,
+        FirestoreService firestoreService)
     {
         _context = context;
         _logger = logger;
-        _utilService = utilService;
         _menuService = menuService;
+        _firestoreService = firestoreService;
     }
 
     // ✅ คุณต้องเขียนเองให้เชื่อมกับ Firestore SDK
     // และทำการคัดลอกข้อมูลจาก Firestore มายังฐานข้อมูล ChickkoContext
-    public async Task<string> CopyOrderFromFirestore(string datefrom = "", string dateto = "")
+    public async Task<string> CopyOrderFromFirestore()
     {
         int copied = 0;
         try
         {
-            //var snapshot = await _utilService.GetSnapshotFromFirestoreWithFiltersBetween("orders", "orderDate", datefrom, dateto);
-            var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateGreaterThan(
-                    collectionName: "orders",
-                    orderByField: "orderDate",
-                    whereField: "orderDate",
-                    dateTo: datefrom
-                );
+            var lastOrderDate = await _context.OrderHeaders.MaxAsync(o => o.OrderDate);
+            var lastOrderDateString = lastOrderDate?.ToString("yyyy-MM-dd") ?? "";
+            var snapshot = await _firestoreService.GetOrdersAsync(lastOrderDateString, "");
             // var snapshot = await _utilService.GetSnapshotFromFirestoreWithID(
             //             collectionName: "orders",DocumentId:"0PauDktHZcH3bvcUU1En"      
             //         );

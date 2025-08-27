@@ -20,7 +20,7 @@ namespace chickko.api.Controllers
 
         public async Task<IActionResult> CopyOrderFromFirestore(CopyOrderFromFirestore _CopyOrderFromFirestore)
         {
-            var result = await _ordersService.CopyOrderFromFirestore(_CopyOrderFromFirestore.OrderDateFrom.ToString() ?? "", _CopyOrderFromFirestore.OrderDateTo.ToString() ?? "");
+            var result = await _ordersService.CopyOrderFromFirestore();
             return Ok(new
             {
                 success = true,

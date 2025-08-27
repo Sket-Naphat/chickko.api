@@ -11,12 +11,14 @@ namespace chickko.api.Services
         private readonly ChickkoContext _context;
         private readonly ILogger<MenuService> _logger;
         private readonly IUtilService _utilService;
+        private readonly FirestoreService _firestoreService;
 
-        public MenuService(ChickkoContext context, ILogger<MenuService> logger, IUtilService utilService)
+        public MenuService(ChickkoContext context, ILogger<MenuService> logger, IUtilService utilService, FirestoreService firestoreService)
         {
             _context = context;
             _logger = logger;
             _utilService = utilService;
+            _firestoreService = firestoreService;
         }
 
         public List<Menu> GetMenus()
@@ -75,7 +77,8 @@ namespace chickko.api.Services
             try
             {
                 //ดึงข้อมูลจาก Firestore
-                var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu", "category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
+                //var snapshot = await _utilService.GetSnapshotFromFirestoreByCollectionNameAndOrderBy("menu", "category"); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
+                var snapshot = await _firestoreService.GetMenusAsync(); // ดึงข้อมูลจาก collection "menu" และเรียงตาม "category"
                 if (snapshot.Documents.Count == 0)
                 {
                     return "ไม่มีเมนูใน Firestore ที่จะคัดลอก";
