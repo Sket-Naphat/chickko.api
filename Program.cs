@@ -112,8 +112,8 @@ app.MapGet("/debug/env", () =>
     var envVars = new Dictionary<string, object>();
     
     // ตรวจสอบ environment variables ที่เกี่ยวข้อง
-    var credentialsExists = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON"));
-    var credentialsLength = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON")?.Length ?? 0;
+    var credentialsExists = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON_HKT"));
+    var credentialsLength = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON_HKT")?.Length ?? 0;
     
     envVars.Add("GOOGLE_APPLICATION_CREDENTIALS_JSON_EXISTS", credentialsExists);
     envVars.Add("GOOGLE_APPLICATION_CREDENTIALS_JSON_LENGTH", credentialsLength);
