@@ -9,63 +9,35 @@ namespace chickko.api.Services
     public class UtilService : IUtilService
     {
         private readonly ChickkoContext _context;
-        public UtilService(ChickkoContext context)
+        private readonly ISiteService _siteService;
+        public UtilService(ChickkoContext context, ISiteService siteService)
         {
             _context = context;
+            _siteService = siteService;
         }
         private FirestoreDb GetFirestoreDb()
         {
-            try
-            {
-                Console.WriteLine("🔍 กำลังตรวจสอบ Environment Variables...");
-                
-                // ตรวจสอบว่ามี environment variable หรือไม่
-                var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
-                
-                Console.WriteLine($"📋 GOOGLE_APPLICATION_CREDENTIALS_JSON exists: {!string.IsNullOrEmpty(credentialsJson)}");
-                if (!string.IsNullOrEmpty(credentialsJson))
-                {
-                    Console.WriteLine($"� Credentials length: {credentialsJson.Length}");
-                    Console.WriteLine($"📝 First 50 chars: {(credentialsJson.Length > 50 ? credentialsJson.Substring(0, 50) + "..." : credentialsJson)}");
-                    
-                    // ตรวจสอบว่าเป็น JSON ที่ถูกต้องหรือไม่
-                    try
-                    {
-                        System.Text.Json.JsonDocument.Parse(credentialsJson);
-                        Console.WriteLine("✅ JSON format is valid");
-                    }
-                    catch (Exception jsonEx)
-                    {
-                        Console.WriteLine($"❌ Invalid JSON format: {jsonEx.Message}");
-                        throw new Exception($"Invalid JSON credentials: {jsonEx.Message}");
-                    }
-                    
-                    var filePath = Path.Combine(Path.GetTempPath(), "gcp-credentials.json");
-                    Console.WriteLine($"📁 Writing credentials to: {filePath}");
-                    
-                    File.WriteAllText(filePath, credentialsJson);
-                    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
-                    
-                    Console.WriteLine("✅ Credentials file created successfully");
-                }
-                else
-                {
-                    Console.WriteLine("❌ GOOGLE_APPLICATION_CREDENTIALS_JSON not found or empty");
-                    throw new Exception("Missing GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable");
-                }
+            //local
+            // Environment.SetEnvironmentVariable(
+            //     "GOOGLE_APPLICATION_CREDENTIALS",
+            //     Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
+            // );
+            // Console.WriteLine("🔥 GOOGLE_APPLICATION_CREDENTIALS = " + Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
 
-                Console.WriteLine("🔥 Creating FirestoreDb instance...");
-                var db = FirestoreDb.Create("chickkoapp");
-                Console.WriteLine("✅ FirestoreDb created successfully");
-                
-                return db;
-            }
-            catch (Exception ex)
+            var site = _siteService.GetCurrentSite();
+            if (string.IsNullOrEmpty(site))
+                site = "HKT"; // default site
+
+            var credentialsJson = Environment.GetEnvironmentVariable($"GOOGLE_APPLICATION_CREDENTIALS_JSON_{site}");
+
+            if (!string.IsNullOrEmpty(credentialsJson))
             {
-                Console.WriteLine($"❌ Error in GetFirestoreDb: {ex.Message}");
-                Console.WriteLine($"🔍 Stack trace: {ex.StackTrace}");
-                throw;
+                var filePath = Path.Combine(Path.GetTempPath(), "gcp-credentials.json");
+                File.WriteAllText(filePath, credentialsJson);
+                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
             }
+
+            return FirestoreDb.Create("chickkoapp");
         }
         public async Task<QuerySnapshot> GetSnapshotFromFirestoreByCollectionName(string collectionName)
         {
