@@ -13,20 +13,18 @@ public class OrdersService : IOrdersService
     private readonly ChickkoContext _context;
     private readonly ILogger<OrdersService> _logger;
     private readonly IMenuService _menuService;
-    private readonly FirestoreService _firestoreService;
+
     private readonly IUtilService _utilService;
 
     public OrdersService(
         ChickkoContext context,
         ILogger<OrdersService> logger,
         IMenuService menuService,
-        FirestoreService firestoreService,
         IUtilService utilService)
     {
         _context = context;
         _logger = logger;
         _menuService = menuService;
-        _firestoreService = firestoreService;
         _utilService = utilService;
     }
 

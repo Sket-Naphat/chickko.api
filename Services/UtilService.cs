@@ -26,7 +26,8 @@ namespace chickko.api.Services
                 string envVarName = site switch
                 {
                     "HKT" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_HKT",
-                    "BKK" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_BKK"
+                    "BKK" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_BKK",
+                    _ => throw new ArgumentException("Unknown site")
                 };
 
                 Console.WriteLine($"🔍 Looking for environment variable: {envVarName}");
@@ -56,7 +57,8 @@ namespace chickko.api.Services
                 string projectId = site switch
                 {
                     "HKT" => "chickkoapp",
-                    "BKK" => "chick-ko-bkk"
+                    "BKK" => "chick-ko-bkk",
+                    _ => throw new ArgumentException("Unknown site")
                 };
 
                 Console.WriteLine($"🔥 Creating FirestoreDb with project: {projectId}");

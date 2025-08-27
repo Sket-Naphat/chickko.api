@@ -32,8 +32,7 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<ICostService, CostService>();
 builder.Services.AddScoped<IWorktimeService, WorktimeService>();
 
-// เพิ่ม FirestoreService เพื่อใช้ในการเชื่อมต่อกับ Firestore
-builder.Services.AddScoped<FirestoreService>();
+
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication("Bearer")
