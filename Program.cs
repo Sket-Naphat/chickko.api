@@ -106,4 +106,46 @@ app.MapControllers(); // ⭐️ Map Controller routes
 app.MapGet("/menus", async (ChickkoContext db) =>
     await db.Menus.ToListAsync());
 
+// Debug endpoint สำหรับตรวจสอบ environment variables
+app.MapGet("/debug/env", () =>
+{
+    var envVars = new Dictionary<string, object>();
+    
+    // ตรวจสอบ environment variables ที่เกี่ยวข้อง
+    var credentialsExists = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON"));
+    var credentialsLength = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON")?.Length ?? 0;
+    
+    envVars.Add("GOOGLE_APPLICATION_CREDENTIALS_JSON_EXISTS", credentialsExists);
+    envVars.Add("GOOGLE_APPLICATION_CREDENTIALS_JSON_LENGTH", credentialsLength);
+    envVars.Add("ENVIRONMENT", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown");
+    envVars.Add("TEMP_PATH", Path.GetTempPath());
+    
+    return Results.Ok(envVars);
+});
+
+// Health check endpoint สำหรับตรวจสอบ Firebase connection
+app.MapGet("/health/firebase", async (IUtilService utilService) =>
+{
+    try
+    {
+        // ลองดึงข้อมูลจาก Firestore collection ใดก็ได้
+        var snapshot = await utilService.GetSnapshotFromFirestoreByCollectionName("orders");
+        return Results.Ok(new { 
+            status = "healthy",
+            message = "Firebase connection successful",
+            timestamp = DateTime.UtcNow,
+            documentsFound = snapshot.Documents.Count
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(
+            detail: ex.Message,
+            statusCode: 500,
+            title: "Firebase connection failed",
+            instance: "/health/firebase"
+        );
+    }
+});
+
 app.Run();
