@@ -345,7 +345,35 @@ namespace chickko.api.Services
                 throw;
             }
         }
+        public async Task CreateStockDetail(StockDto stockDto)
+        {
+            try
+            {
+                var newStock = new Stock
+                {
+                    ItemName = stockDto.ItemName ?? string.Empty,
+                    StockCategoryID = stockDto.StockCategoryID,
+                    StockUnitTypeID = stockDto.StockUnitTypeID,
+                    StockLocationID = stockDto.StockLocationID,
+                    TotalQTY = stockDto.TotalQTY,
+                    RequiredQTY = stockDto.RequiredQTY,
+                    StockInQTY = stockDto.StockInQTY,
+                    Remark = "",
+                    Active = true,
+                    UpdateDate = DateOnly.FromDateTime(DateTime.Now),
+                    UpdateTime = TimeOnly.FromDateTime(DateTime.Now)
+                };
 
+                _context.Stocks.Add(newStock);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: " + ex.Message);
+                Console.WriteLine("Inner: " + ex.InnerException?.Message);
+                throw; // หรือจะ return BadRequest ก็ได้
+            }
+        }
 
         public async Task UpdateStockDetail(StockDto stockDto)
         {

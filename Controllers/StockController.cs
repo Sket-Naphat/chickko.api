@@ -187,6 +187,12 @@ namespace chickko.api.controller
                 failedItems = failedList
             });
         }
+        [HttpPost("CreateStockDetail")]
+        public async Task<IActionResult> CreateStockDetail(StockDto stockDto)
+        {
+            await _stockService.CreateStockDetail(stockDto);
+            return Ok();
+        }
         [HttpPost("UpdateStockDetail")]
         public async Task<IActionResult> UpdateStockDetail(StockDto stockDto)
         {
