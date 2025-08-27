@@ -14,17 +14,20 @@ public class OrdersService : IOrdersService
     private readonly ILogger<OrdersService> _logger;
     private readonly IMenuService _menuService;
     private readonly FirestoreService _firestoreService;
+    private readonly IUtilService _utilService;
 
     public OrdersService(
         ChickkoContext context,
         ILogger<OrdersService> logger,
         IMenuService menuService,
-        FirestoreService firestoreService)
+        FirestoreService firestoreService,
+        IUtilService utilService)
     {
         _context = context;
         _logger = logger;
         _menuService = menuService;
         _firestoreService = firestoreService;
+        _utilService = utilService;
     }
 
     // ✅ คุณต้องเขียนเองให้เชื่อมกับ Firestore SDK
@@ -36,10 +39,13 @@ public class OrdersService : IOrdersService
         {
             var lastOrderDate = await _context.OrderHeaders.MaxAsync(o => o.OrderDate);
             var lastOrderDateString = lastOrderDate?.ToString("yyyy-MM-dd") ?? "";
-            var snapshot = await _firestoreService.GetOrdersAsync(lastOrderDateString, "");
-            // var snapshot = await _utilService.GetSnapshotFromFirestoreWithID(
-            //             collectionName: "orders",DocumentId:"0PauDktHZcH3bvcUU1En"      
-            //         );
+            //var snapshot = await _firestoreService.GetOrdersAsync(lastOrderDateString, "");
+            var snapshot = await _utilService.GetSnapshotFromFirestoreWithDateGreaterThan(
+                    collectionName: "orders",
+                    orderByField: "orderDate",
+                    whereField: "orderDate",
+                    dateTo: lastOrderDateString
+                );
 
 
             foreach (var doc in snapshot.Documents)
@@ -109,7 +115,7 @@ public class OrdersService : IOrdersService
                         DischargeType = _DischargeType, // ใช้ค่าเริ่มต้นถ้าไม่พบ
                         DischargeTime = TimeOnly.TryParse(data["dischargeTime"]?.ToString(), out var dTime) ? dTime : null,
                         // IsDischarge = Convert.ToBoolean(data["discharge"]),
-                        IsDischarge = data.TryGetValue("discharge", out var disVal) && bool.TryParse(disVal?.ToString(), out var isDischarge) ? isDischarge : false,
+                        IsDischarge = data.TryGetValue("discharge", out var disVal) && bool.TryParse(disVal?.ToString(), out var isDischargeParsed) ? isDischargeParsed : false,
                         FinishOrderTime = TimeOnly.TryParse(data["finishedOrderTime"]?.ToString(), out var fTime) ? fTime : null,
                         IsFinishOrder = Convert.ToBoolean(data["finishedOrder"]),
                         TotalPrice = 0,
@@ -230,7 +236,7 @@ public class OrdersService : IOrdersService
             return "❌ เกิดข้อผิดพลาด กรุณาตรวจสอบ " + ex.Message + " เพิ่มเติม";
         }
     }
-   
+
     public async Task<string> ImportOrderFromExcel()
     {
         int copied = 0;

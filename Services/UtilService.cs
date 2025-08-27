@@ -9,17 +9,28 @@ namespace chickko.api.Services
     public class UtilService : IUtilService
     {
         private readonly ChickkoContext _context;
-        public UtilService(ChickkoContext context) {
+        public UtilService(ChickkoContext context)
+        {
             _context = context;
         }
         private FirestoreDb GetFirestoreDb()
         {
             //local
-            Environment.SetEnvironmentVariable(
-                "GOOGLE_APPLICATION_CREDENTIALS",
-                Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
-            );
-            Console.WriteLine("🔥 GOOGLE_APPLICATION_CREDENTIALS = " + Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
+            // Environment.SetEnvironmentVariable(
+            //     "GOOGLE_APPLICATION_CREDENTIALS",
+            //     Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
+            // );
+            // Console.WriteLine("🔥 GOOGLE_APPLICATION_CREDENTIALS = " + Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
+
+
+            var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+
+            if (!string.IsNullOrEmpty(credentialsJson))
+            {
+                var filePath = Path.Combine(Path.GetTempPath(), "gcp-credentials.json");
+                File.WriteAllText(filePath, credentialsJson);
+                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
+            }
 
             return FirestoreDb.Create("chickkoapp");
         }
