@@ -1,3 +1,4 @@
+using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
 using chickko.api.Interface;
 using System;
@@ -16,6 +17,7 @@ namespace chickko.api.Services
         private FirestoreDb? _db;
         private bool _isInitialized;
         private readonly object _lockObj = new object();
+        private string? _siteInUse;
         
         public FirestoreService(ISiteService siteService, ILogger<FirestoreService> logger)
         {
@@ -25,47 +27,68 @@ namespace chickko.api.Services
 
         private void InitializeFirebase(string site)
         {
-            if (_isInitialized) return;
+            // ถ้า init แล้วและ site เดิม ให้ข้าม
+            if (_isInitialized && string.Equals(_siteInUse, site, StringComparison.OrdinalIgnoreCase)) return;
 
             lock (_lockObj)
             {
-                if (_isInitialized) return;
+                if (_isInitialized && string.Equals(_siteInUse, site, StringComparison.OrdinalIgnoreCase)) return;
 
-                try 
+                try
                 {
-                    string envName = site switch
+                    if (string.IsNullOrWhiteSpace(site))
+                        throw new Exception("site ว่างเปล่า");
+
+                    var normalizedSite = site.Trim().ToUpperInvariant();
+
+                    // เลือกชื่อ ENV ตาม site พร้อม fallback ชื่อรวม
+                    string[] envCandidates = normalizedSite switch
                     {
-                        "HKT" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_HKT",
-                        "BKK" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_BKK",
+                        "HKT" => new[] { "GOOGLE_APPLICATION_CREDENTIALS_JSON_HKT", "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
+                        "BKK" => new[] { "GOOGLE_APPLICATION_CREDENTIALS_JSON_BKK", "GOOGLE_APPLICATION_CREDENTIALS_JSON" },
                         _ => throw new Exception($"ไม่รู้จัก site: {site}")
                     };
 
-                    var credentialsJson = Environment.GetEnvironmentVariable(envName);
-                    if (string.IsNullOrEmpty(credentialsJson))
+                    string? credentialsJson = null;
+                    string? chosenEnv = null;
+                    foreach (var name in envCandidates)
                     {
-                        throw new Exception($"ไม่พบ credentials สำหรับ site: {site}");
+                        var v = Environment.GetEnvironmentVariable(name);
+                        if (!string.IsNullOrWhiteSpace(v))
+                        {
+                            credentialsJson = v;
+                            chosenEnv = name;
+                            break;
+                        }
                     }
 
-                    var filePath = Path.Combine(Path.GetTempPath(), $"gcp-credentials-{site}.json");
-                    File.WriteAllText(filePath, credentialsJson);
-                    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
+                    if (string.IsNullOrWhiteSpace(credentialsJson))
+                        throw new Exception($"ไม่พบ credentials สำหรับ site: {site}. โปรดตั้งค่า ENV: {string.Join(", ", envCandidates)}");
 
-                    if(site == "HKT")
+                    // ใช้ Credential จาก JSON โดยตรง (ไม่ต้องเขียนไฟล์/ตั้ง ENV ทั่วระบบ)
+                    var credential = GoogleCredential.FromJson(credentialsJson);
+
+                    string projectId = normalizedSite switch
                     {
-                        _db = FirestoreDb.Create("chickkoapp"); // แก้เป็น project ID จริง
-                    }
-                    else if(site == "BKK")
+                        "HKT" => "chickkoapp",
+                        "BKK" => "chick-ko-bkk",
+                        _ => throw new Exception($"ไม่รู้จัก site: {site}")
+                    };
+
+                    _db = new FirestoreDbBuilder
                     {
-                        _db = FirestoreDb.Create("chick-ko-bkk"); // แก้เป็น project ID จริง
-                    }
-                    
+                        ProjectId = projectId,
+                        Credential = credential
+                    }.Build();
+
+                    _siteInUse = normalizedSite;
                     _isInitialized = true;
-                    
-                    _logger.LogInformation($"✅ เชื่อมต่อ Firestore สำเร็จ (site: {site})");
+
+                    _logger.LogInformation("✅ เชื่อมต่อ Firestore สำเร็จ (site: {site}, env: {env}, project: {project})", normalizedSite, chosenEnv, projectId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, $"❌ ไม่สามารถเชื่อมต่อ Firestore ได้ (site: {site})");
+                    _logger.LogError(ex, "❌ ไม่สามารถเชื่อมต่อ Firestore ได้ (site: {site})", site);
                     throw;
                 }
             }
@@ -118,7 +141,6 @@ namespace chickko.api.Services
         {
             var site = _siteService.GetCurrentSite();
             InitializeFirebase(site);
-            
             if (_db == null)
             {
                 throw new Exception("Firestore ยังไม่พร้อมใช้งาน");
