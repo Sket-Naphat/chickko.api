@@ -17,27 +17,59 @@ namespace chickko.api.Services
         }
         private FirestoreDb GetFirestoreDb()
         {
-            //local
-            // Environment.SetEnvironmentVariable(
-            //     "GOOGLE_APPLICATION_CREDENTIALS",
-            //     Path.Combine(Directory.GetCurrentDirectory(), "firebase/credentials.json")
-            // );
-            // Console.WriteLine("🔥 GOOGLE_APPLICATION_CREDENTIALS = " + Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"));
-
-            var site = _siteService.GetCurrentSite();
-            if (string.IsNullOrEmpty(site))
-                site = "HKT"; // default site
-
-            var credentialsJson = Environment.GetEnvironmentVariable($"GOOGLE_APPLICATION_CREDENTIALS_JSON_{site}");
-
-            if (!string.IsNullOrEmpty(credentialsJson))
+            try
             {
-                var filePath = Path.Combine(Path.GetTempPath(), "gcp-credentials.json");
-                File.WriteAllText(filePath, credentialsJson);
-                Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
-            }
+                var site = _siteService.GetCurrentSite();
+                Console.WriteLine($"🔍 Current site: {site}");
 
-            return FirestoreDb.Create("chickkoapp");
+                // ตั้งชื่อ environment variable ตาม site
+                string envVarName = site switch
+                {
+                    "HKT" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_HKT",
+                    "BKK" => "GOOGLE_APPLICATION_CREDENTIALS_JSON_BKK"
+                };
+
+                Console.WriteLine($"🔍 Looking for environment variable: {envVarName}");
+                var credentialsJson = Environment.GetEnvironmentVariable(envVarName);
+
+                Console.WriteLine($"📋 Credentials found: {!string.IsNullOrEmpty(credentialsJson)}");
+                
+                if (!string.IsNullOrEmpty(credentialsJson))
+                {
+                    Console.WriteLine($"📊 Credentials length: {credentialsJson.Length}");
+                    
+                    // ใช้ชื่อไฟล์ที่แยกตาม site เพื่อหลีกเลี่ยงการทับกัน
+                    var filePath = Path.Combine(Path.GetTempPath(), $"gcp-credentials-{site}.json");
+                    Console.WriteLine($"📁 Writing credentials to: {filePath}");
+                    
+                    File.WriteAllText(filePath, credentialsJson);
+                    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", filePath);
+                    Console.WriteLine("✅ Credentials file created successfully");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Environment variable {envVarName} not found or empty");
+                    throw new Exception($"Missing {envVarName} environment variable");
+                }
+
+                // เลือก project ID ตาม site
+                string projectId = site switch
+                {
+                    "HKT" => "chickkoapp",
+                    "BKK" => "chick-ko-bkk"
+                };
+
+                Console.WriteLine($"🔥 Creating FirestoreDb with project: {projectId}");
+                var firestoreDb = FirestoreDb.Create(projectId);
+                Console.WriteLine("✅ FirestoreDb created successfully");
+                
+                return firestoreDb;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error in GetFirestoreDb: {ex.Message}");
+                throw;
+            }
         }
         public async Task<QuerySnapshot> GetSnapshotFromFirestoreByCollectionName(string collectionName)
         {
