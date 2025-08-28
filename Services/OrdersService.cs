@@ -179,24 +179,29 @@ public class OrdersService : IOrdersService
                         foreach (var tName in toppingNames)
                         {
                             var topping = _context.Menus.FirstOrDefault(x => x.MenuIdInFirestore == tName.Trim());
-                            if (topping != null)
+                            if (topping == null)
                             {
-                                _context.Attach(topping);
-
-                                detail.Toppings.Add(new OrderDetailTopping
+                                topping = await _menuService.CopyMenusFromFirestoreByID(tName.Trim());
+                                if (topping == null)
                                 {
-                                    MenuId = topping.Id,
-                                    Menu = topping,
-                                    ToppingPrice = topping.Price
-                                });
+                                    _logger.LogWarning($"ไม่พบเมนูหลักชื่อ '{tName.Trim()}' ในฐานข้อมูล และไม่สามารถคัดลอกได้");
+                                    continue;
+                                }
+                            }
 
-                                // เพิ่มราคาท้อปปิ้ง
-                                detail.Price += topping.Price;
-                            }
-                            else
+
+                            _context.Attach(topping);
+
+                            detail.Toppings.Add(new OrderDetailTopping
                             {
-                                _logger.LogWarning($"Topping ไม่พบในฐานข้อมูล: {tName.Trim()}");
-                            }
+                                MenuId = topping.Id,
+                                Menu = topping,
+                                ToppingPrice = topping.Price
+                            });
+
+                            // เพิ่มราคาท้อปปิ้ง
+                            detail.Price += topping.Price;
+
                             detail.ToppingQTY += 1;
                         }
 
