@@ -2,6 +2,7 @@ using System.Globalization;
 using chickko.api.Data;
 using chickko.api.Dtos;
 using chickko.api.Interface;
+using chickko.api.Migrations;
 using chickko.api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -349,12 +350,28 @@ namespace chickko.api.Services
         {
             try
             {
+                var StockCategoryID = stockDto.StockCategoryID;
+                var StockUnitTypeID = stockDto.StockUnitTypeID;
+                var StockLocationID = stockDto.StockLocationID;
+
+                if (StockCategoryID == 0)
+                {
+                    StockCategoryID = await AddStockCategory(stockDto.StockCategoryName);
+                }
+                if (StockUnitTypeID == 0)
+                {
+                    StockUnitTypeID = await AddStockUnitType(stockDto.StockUnitTypeName);
+                }
+                if (StockLocationID == 0)
+                {
+                    StockLocationID = await AddStockLocation(stockDto.StockLocationName);
+                }
                 var newStock = new Stock
                 {
                     ItemName = stockDto.ItemName ?? string.Empty,
-                    StockCategoryID = stockDto.StockCategoryID,
-                    StockUnitTypeID = stockDto.StockUnitTypeID,
-                    StockLocationID = stockDto.StockLocationID,
+                    StockCategoryID = StockCategoryID,
+                    StockUnitTypeID = StockUnitTypeID,
+                    StockLocationID = StockLocationID,
                     TotalQTY = stockDto.TotalQTY,
                     RequiredQTY = stockDto.RequiredQTY,
                     StockInQTY = stockDto.StockInQTY,
@@ -375,10 +392,84 @@ namespace chickko.api.Services
             }
         }
 
+        // Add this method to create a new StockCategory if it doesn't exist and return its ID
+        private async Task<int> AddStockCategory(string stockCategoryName)
+        {
+            if (string.IsNullOrWhiteSpace(stockCategoryName))
+                throw new ArgumentException("Stock category name cannot be empty.");
+
+            var existingCategory = await _context.StockCategory
+                .FirstOrDefaultAsync(c => c.StockCategoryName == stockCategoryName);
+
+            if (existingCategory != null)
+                return existingCategory.StockCategoryID;
+
+            var newCategory = new StockCategory
+            {
+                StockCategoryName = stockCategoryName,
+                Description = stockCategoryName
+            };
+
+            _context.StockCategory.Add(newCategory);
+            await Task.Delay(100); // เพิ่ม delay ตรงนี้
+            await _context.SaveChangesAsync();
+
+            return newCategory.StockCategoryID;
+        }
+
+        // Add this method to create a new StockUnitType if it doesn't exist and return its ID
+        private async Task<int> AddStockUnitType(string stockUnitTypeName)
+        {
+            if (string.IsNullOrWhiteSpace(stockUnitTypeName))
+                throw new ArgumentException("Stock unit type name cannot be empty.");
+
+            var existingUnitType = await _context.StockUnitType
+                .FirstOrDefaultAsync(u => u.StockUnitTypeName == stockUnitTypeName);
+
+            if (existingUnitType != null)
+                return existingUnitType.StockUnitTypeID;
+
+            var newUnitType = new StockUnitType
+            {
+                StockUnitTypeName = stockUnitTypeName,
+                Description = stockUnitTypeName
+            };
+
+            _context.StockUnitType.Add(newUnitType);
+            await Task.Delay(100); // เพิ่ม delay ตรงนี้
+            await _context.SaveChangesAsync();
+
+            return newUnitType.StockUnitTypeID;
+        }
+        private async Task<int> AddStockLocation(string stockLocationName)
+        {
+            if (string.IsNullOrWhiteSpace(stockLocationName))
+                throw new ArgumentException("Stock location name cannot be empty.");
+
+            var existingLocation = await _context.StockLocation
+                .FirstOrDefaultAsync(l => l.StockLocationName == stockLocationName);
+
+            if (existingLocation != null)
+                return existingLocation.StockLocationID;
+
+            var newLocation = new StockLocation
+            {
+                StockLocationName = stockLocationName,
+                Description = stockLocationName
+            };
+
+            _context.StockLocation.Add(newLocation);
+            await Task.Delay(100); // เพิ่ม delay ตรงนี้
+            await _context.SaveChangesAsync();
+
+            return newLocation.StockLocationID;
+        }
+
         public async Task UpdateStockDetail(StockDto stockDto)
         {
             try
             {
+                
                 var stock = await _context.Stocks.FindAsync(stockDto.StockId)
                 ?? throw new Exception($"ไม่พบ Stock ID: {stockDto.StockId}");
 
@@ -402,14 +493,29 @@ namespace chickko.api.Services
                 {
                     stock.StockLocationID = stockDto.StockLocationID;
                 }
+                else if (stockDto.StockLocationName != null && stockDto.StockLocationName != string.Empty)
+                {
+                    stock.StockLocationID = await AddStockLocation(stockDto.StockLocationName);
+                }
+                
                 if (stockDto.StockCategoryID > 0)
                 {
                     stock.StockCategoryID = stockDto.StockCategoryID;
                 }
+                else if (stockDto.StockCategoryName != null && stockDto.StockCategoryName != string.Empty)
+                {
+                    stock.StockCategoryID = await AddStockCategory(stockDto.StockCategoryName);
+                }
+
                 if (stockDto.StockUnitTypeID > 0)
                 {
                     stock.StockUnitTypeID = stockDto.StockUnitTypeID;
                 }
+                else if (stockDto.StockUnitTypeName != null && stockDto.StockUnitTypeName != string.Empty)
+                {
+                    stock.StockUnitTypeID = await AddStockUnitType(stockDto.StockUnitTypeName);
+                }
+
                 if (stockDto.TotalQTY > 0)
                 {
                     stock.TotalQTY = stockDto.TotalQTY;

@@ -1,6 +1,6 @@
 using chickko.api.Models;
 
-namespace chickko.api.Services
+namespace chickko.api.Interface
 {
     public interface IMenuService
     {

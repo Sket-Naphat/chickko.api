@@ -1,11 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.Text.Json;
 using chickko.api.Data;
 using chickko.api.Interface;
 using chickko.api.Models;
 using chickko.api.Services;
 using Google.Api;
+using Google.Apis.Auth.OAuth2;
 using Google.Cloud.Firestore;
+using Google.Cloud.Firestore.V1;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 public class OrdersService : IOrdersService
@@ -35,6 +38,9 @@ public class OrdersService : IOrdersService
         int copied = 0;
         try
         {
+            //await InitializeFirestore();
+            
+
             var lastOrderDate = await _context.OrderHeaders.MaxAsync(o => o.OrderDate);
             var lastOrderDateString = lastOrderDate?.ToString("yyyy-MM-dd") ?? "";
             //var snapshot = await _firestoreService.GetOrdersAsync(lastOrderDateString, "");
@@ -390,6 +396,48 @@ public class OrdersService : IOrdersService
             }
 
             return "❌ เกิดข้อผิดพลาด: " + ex.Message;
+        }
+    }
+     public async Task InitializeFirestore()
+    {
+        try
+        {
+            var credPath = @"d:\Sket\sket_project\chickko.api\Firebase\credentials_bkk.json";
+            var json = await File.ReadAllTextAsync(credPath);
+
+            Console.WriteLine("📁 File loaded successfully");
+
+            // Parse เพื่อดูข้อมูล
+            using var doc = JsonDocument.Parse(json);
+            var projectId = doc.RootElement.GetProperty("project_id").GetString();
+            var clientEmail = doc.RootElement.GetProperty("client_email").GetString();
+
+            Console.WriteLine($"Project: {projectId}");
+            Console.WriteLine($"Email: {clientEmail}");
+
+            // สร้าง credential
+            var credential = GoogleCredential.FromJson(json).CreateScoped(FirestoreClient.DefaultScopes);
+            Console.WriteLine("✅ Credential created");
+
+            // ทดสอบ access token
+            var token = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
+            Console.WriteLine($"✅ Access token obtained: {token.Substring(0, 20)}...");
+
+            // ทดสอบ Firestore connection
+            var db = new FirestoreDbBuilder
+            {
+                ProjectId = projectId,
+                Credential = credential
+            }.Build();
+
+            Console.WriteLine("✅ Firestore DB created successfully");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error: {ex.Message}");
+            if (ex.InnerException != null)
+                Console.WriteLine($"❌ Inner: {ex.InnerException.Message}");
         }
     }
 }

@@ -96,7 +96,13 @@ namespace chickko.api.Data
                 .HasForeignKey(o => o.TableID)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<OrderHeader>(entity =>
+            {
+                entity.HasKey(e => e.OrderId);
 
+                entity.Property(e => e.OrderId)
+                    .ValueGeneratedOnAdd();  // บอก EF ว่าค่านี้ auto generate
+            });
 
             modelBuilder.Entity<ImportOrderExcel>(entity =>
             {

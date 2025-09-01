@@ -73,6 +73,7 @@ namespace chickko.api.Models
     public class StockCategory
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int StockCategoryID { get; set; }
         public string StockCategoryName { get; set; } = ""!;
         public string Description { get; set; } = "";
@@ -80,6 +81,7 @@ namespace chickko.api.Models
     public class StockUnitType
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int StockUnitTypeID { get; set; }
         public string StockUnitTypeName { get; set; } = ""!;
         public string Description { get; set; } = "";
@@ -87,6 +89,7 @@ namespace chickko.api.Models
     public class StockLocation
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int StockLocationID { get; set; }
         public string StockLocationName { get; set; } = ""!;
         public string Description { get; set; } = "";

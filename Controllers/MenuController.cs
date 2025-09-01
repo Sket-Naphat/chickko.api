@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using chickko.api.Services;
+using chickko.api.Interface;
 using chickko.api.Models;
 using Microsoft.AspNetCore.Authorization; 
 // เพิ่มการใช้งาน Authorize เพื่อให้สามารถตรวจสอบสิทธิ์ได้
