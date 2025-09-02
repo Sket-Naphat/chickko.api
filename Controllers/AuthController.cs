@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using chickko.api.Services;
 using chickko.api.Models;
 using Microsoft.AspNetCore.Authorization;
+using chickko.api.Interface;
 
 namespace chickko.api.Controllers
 {
@@ -10,10 +11,12 @@ namespace chickko.api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ISiteService _siteService;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ISiteService siteService)
         {
             _authService = authService;
+            _siteService = siteService;
         }
 
         [HttpPost("login")]
@@ -24,19 +27,42 @@ namespace chickko.api.Controllers
             return Ok(result);
         }
 
-        // [HttpPost("register")]
-        // [AllowAnonymous]
-        // public async Task<IActionResult> Register([FromBody] RegisterRequest request)
-        // {
-        //     try
-        //     {
-        //         var user = await _authService.Register(request);
-        //         return Ok(user);
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         return BadRequest(new { message = ex.Message });
-        //     }
-        // }
+        [HttpPost("register")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                var currentSite = _siteService.GetCurrentSite();
+                var result = await _authService.Register(request);
+                
+                if (result == false)
+                {
+                    return BadRequest(new { 
+                        success = false,
+                        message = "Registration failed.",
+                        site = currentSite,
+                        timestamp = DateTime.UtcNow
+                    });
+                }
+                
+                return Ok(new { 
+                    success = true,
+                    message = "User registered successfully",
+                    site = currentSite,
+                    username = request.Username,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { 
+                    success = false,
+                    message = ex.Message,
+                    site = _siteService.GetCurrentSite(),
+                    timestamp = DateTime.UtcNow
+                });
+            }
+        }
     }
 }

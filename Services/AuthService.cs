@@ -93,8 +93,16 @@ namespace chickko.api.Services
         }
 
         // ================== Register (ยังใช้) ===================
-        public async Task<User> Register(RegisterRequest request)
+        public async Task<bool> Register(RegisterRequest request)
         {
+            var result = false;
+            try
+            {
+            // เลือก site ที่จะบันทึก: ถ้า request.Site มีค่า ให้ใช้ค่านั้น, ถ้าไม่มีก็ใช้ currentSite จาก SiteService
+            var selectedSite = !string.IsNullOrWhiteSpace(request.Site)
+                ? request.Site.ToUpperInvariant()
+                : _siteService.GetCurrentSite();
+
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 throw new Exception("Username already exists");
 
@@ -110,13 +118,20 @@ namespace chickko.api.Services
                 UserPermistionID = 3,
                 Contact = "",
                 IsActive = true,
-                Site = request.Site?.ToUpperInvariant() == "BKK" ? "BKK" : "HKT" // ตั้ง site ตอน register ถ้ามี
+                Site = selectedSite // ใช้ site ที่เลือกไว้
             };
 
             user.Password = _passwordHasher.HashPassword(user, request.Password);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return user;
+            result = true;
+            }
+            catch (Exception ex)
+            {
+            result = false;
+            throw new Exception("Registration failed: " + ex.Message);
+            }
+            return result;
         }
 
         // ================== ฟังก์ชันเดิม (เลิกใช้ คอมเมนต์เก็บไว้) ===================
