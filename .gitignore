@@ -16,5 +16,5 @@ project.assets.json
 *.nuget.dgspec.json
 
 Firebase/credentials.json
-
+Firebase/
 .DS_Store
