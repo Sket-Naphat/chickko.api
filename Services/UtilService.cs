@@ -251,7 +251,7 @@ namespace chickko.api.Services
 
                 // ถ้ามีการระบุ whereField และ dateTo ให้กรองข้อมูลที่ whereField < dateTo
                 if (!string.IsNullOrEmpty(whereField) && !string.IsNullOrEmpty(datefrom))
-                    query = query.WhereGreaterThan(whereField, datefrom);
+                    query = query.WhereGreaterThanOrEqualTo(whereField, datefrom);
 
                 // ดึง snapshot จาก query ที่สร้าง
                 return await query.GetSnapshotAsync();
