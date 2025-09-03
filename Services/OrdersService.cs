@@ -39,7 +39,7 @@ public class OrdersService : IOrdersService
         try
         {
             //await InitializeFirestore();
-            
+
 
             var lastOrderDate = await _context.OrderHeaders.MaxAsync(o => o.OrderDate);
             var lastOrderDateString = lastOrderDate?.ToString("yyyy-MM-dd") ?? "";
@@ -398,7 +398,7 @@ public class OrdersService : IOrdersService
             return "❌ เกิดข้อผิดพลาด: " + ex.Message;
         }
     }
-     public async Task InitializeFirestore()
+    public async Task InitializeFirestore()
     {
         try
         {
@@ -439,5 +439,24 @@ public class OrdersService : IOrdersService
             if (ex.InnerException != null)
                 Console.WriteLine($"❌ Inner: {ex.InnerException.Message}");
         }
+    }
+    public async Task<List<DailySaleDto>> GetDailyDineInSalesReport(DateOnly date)
+    {
+        var dailySales = await _context.OrderHeaders
+            .Where(oh => oh.OrderTypeId != 3)   // กรองยอดขายหน้าร้าน
+                                                //.Where(oh => oh.IsFinishOrder == true) // ถ้าต้องการเฉพาะที่ปิดบิลแล้ว
+            .GroupBy(oh => oh.OrderDate)
+            .Select(g => new DailySaleDto
+            {
+                SaleDate = g.Key ?? DateOnly.MinValue,
+                Orders = g.Count(),
+                TotalAmount = g.Sum(x => (decimal?)x.TotalPrice) ?? 0,
+                AvgPerOrder = Math.Round(
+                                  (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2)
+            })
+            .OrderByDescending(x => x.SaleDate)
+            .ToListAsync();
+
+        return dailySales;
     }
 }

@@ -40,5 +40,15 @@ namespace chickko.api.Controllers
                 message = result
             });
         }
+        [HttpGet("GetDailyDineInSalesReport")]
+        public async Task<IActionResult> GetDailyDineInSalesReport(DateOnly date)
+        {
+            var result = await _ordersService.GetDailyDineInSalesReport(date);
+            return Ok(new
+            {
+                success = true,
+                data = result
+            });
+        }
     }
 }

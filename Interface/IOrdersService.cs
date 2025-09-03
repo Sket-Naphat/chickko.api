@@ -6,6 +6,7 @@ namespace chickko.api.Interface
     {
         Task<string> CopyOrderFromFirestore();
         Task<string> ImportOrderFromExcel();
+        Task<List<DailySaleDto>> GetDailyDineInSalesReport(DateOnly date);
 
     }
 }
