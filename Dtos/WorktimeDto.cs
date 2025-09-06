@@ -7,9 +7,8 @@ namespace chickko.api.Dtos
         public int WorktimeID { get; set; }
         [Required]
         public string WorkDate { get; set; } = DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd"); // ⬅️ วันที่ปัจจุบัน
-        public string? TimeClockIn { get; set; } = TimeOnly.FromDateTime(DateTime.Now).ToString("HH:mm:ss"); // ⬅️ เวลาเข้างาน (ตอนนี้)
-        public string? TimeClockOut { get; set; } = TimeOnly.FromDateTime(DateTime.Now).ToString("HH:mm:ss"); // ⬅️ เวลาออกงาน (ตอนนี้)
-
+        public string? TimeClockIn { get; set; }
+        public string? TimeClockOut { get; set; }
         public string ClockInLocation { get; set; } = "";
         public double TotalWorktime { get; set; } = 0;
         public double WageCost { get; set; } = 0!;
@@ -21,5 +20,9 @@ namespace chickko.api.Dtos
         public int EmployeeID { get; set; }
         public string EmployeeName { get; set; } = ""!;
         public bool Active { get; set; }
+        public string? WorkMonth { get; set; }
+        public string? WorkYear { get; set; }
+        public string? StartDate { get; set; }
+        public string? EndDate { get; set; }
     }
 }

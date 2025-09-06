@@ -6,5 +6,8 @@ namespace chickko.api.Interface
     {
         Task<string> ClockIn(WorktimeDto WorktimeDto);
         Task<string> ClockOut(WorktimeDto WorktimeDto);
+        Task<WorktimeDto> GetPeriodWorktimeByEmployeeID(WorktimeDto WorktimeDto);
+        Task<List<WorktimeDto>> GetWorkTimeHistoryByEmployeeID(WorktimeDto WorktimeDto);
+        Task<List<WorktimeDto>> GetWorkTimeHistoryByPeriod(WorktimeDto WorktimeDto);
     }
 }

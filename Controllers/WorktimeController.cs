@@ -47,16 +47,48 @@ namespace chickko.api.controller
                 return BadRequest("เกิดปัญหาในการลงเวาเข้างาน");
             }
         }
-        // [HttpGet("GetAllPeriodWorktime")]
-        // public async Task<IActionResult> GetAllPeriodWorktime()
-        // {
+        [HttpPost("GetPeriodWorktimeByEmployeeID")]
+        public async Task<IActionResult> GetPeriodWorktimeByEmployeeID(WorktimeDto WorktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.GetPeriodWorktimeByEmployeeID(WorktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการดึงข้อมูลเวลาทำงาน");
+            }
+        }
 
-        // }
-
-        // [HttpGet("GetPeriodWorktimeByID")]
-        // public async Task<IActionResult> GetPeriodWorktimeByID(WorktimeDto WorktimeDto)
-        // {
-
-        // }
+        [HttpPost("GetWorkTimeHistoryByEmployeeID")]
+        public async Task<IActionResult> GetWorkTimeHistoryByEmployeeID(WorktimeDto WorktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.GetWorkTimeHistoryByEmployeeID(WorktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการดึงข้อมูลประวัติการทำงาน");
+            }
+        }
+        [HttpPost("GetWorkTimeHistoryByPeriod")]
+        public async Task<IActionResult> GetWorkTimeHistoryByPeriod(WorktimeDto WorktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.GetWorkTimeHistoryByPeriod(WorktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการดึงข้อมูลประวัติการทำงาน");
+            }
+        }
     }
 }

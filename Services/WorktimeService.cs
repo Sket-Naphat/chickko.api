@@ -30,7 +30,7 @@ namespace chickko.api.Services
                 var _Worktime = await _context.Worktime.FirstOrDefaultAsync(w => w.WorkDate == workDate && w.EmployeeID == WorktimeDto.EmployeeID);
                 if (_Worktime != null)
                 {
-                    return "มีการลงเวลาครั้งก่อนหน้าแล้วเมื่อ :"+_Worktime.TimeClockIn +" !";
+                    return "มีการลงเวลาครั้งก่อนหน้าแล้วเมื่อ :" + _Worktime.TimeClockIn + " !";
                 }
                 else
                 {
@@ -126,7 +126,7 @@ namespace chickko.api.Services
                     await _context.SaveChangesAsync();
                 }
 
-                return "บันทึกเวลาออกจากงานสำเร็จเมื่อ "+ timeClockOut +" !";
+                return "บันทึกเวลาออกจากงานสำเร็จเมื่อ " + timeClockOut + " !";
             }
             catch (Exception ex)
             {
@@ -136,6 +136,180 @@ namespace chickko.api.Services
                 throw;
             }
 
+        }
+        public async Task<List<Worktime>> GetAllPeriodWorktime()
+        {
+            try
+            {
+                var worktimes = await _context.Worktime
+                    .Include(w => w.Employee) // รวมข้อมูลพนักงาน
+                    .OrderByDescending(w => w.WorkDate) // เรียงตามวันที่ทำงานจากใหม่ไปเก่า
+                    .ThenByDescending(w => w.TimeClockIn) // เรียงตามเวลาเข้างานจากใหม่ไปเก่า
+                    .ToListAsync();
+
+                return worktimes;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] GetAllPeriodWorktime: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<WorktimeDto> GetPeriodWorktimeByEmployeeID(WorktimeDto _Worktime)
+        {
+            try
+            {
+                var workDate = DateOnly.TryParseExact(_Worktime.WorkDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate)
+                    ? parsedDate
+                    : DateOnly.FromDateTime(DateTime.Now);
+
+                var worktimes = await _context.Worktime
+                    .Include(w => w.Employee) // รวมข้อมูลพนักงาน
+                    .Where(w => w.EmployeeID == _Worktime.EmployeeID && w.WorkDate == workDate)
+                    .OrderByDescending(w => w.WorkDate) // เรียงตามวันที่ทำงานจากใหม่ไปเก่า
+                    .ThenByDescending(w => w.TimeClockIn) // เรียงตามเวลาเข้างานจากใหม่ไปเก่า
+                    .FirstOrDefaultAsync();
+                if (worktimes == null)
+                {
+                    return new WorktimeDto(); // หรือจัดการกรณีที่ไม่พบข้อมูลตามต้องการ
+                }
+
+                _Worktime = new WorktimeDto
+                {
+                    EmployeeID = worktimes.EmployeeID,
+                    WorkDate = worktimes.WorkDate.ToString("yyyy-MM-dd"),
+                    TimeClockIn = worktimes.TimeClockIn?.ToString("HH:mm:ss"),
+                    TimeClockOut = worktimes.TimeClockOut?.ToString("HH:mm:ss"),
+                    ClockInLocation = worktimes.ClockInLocation,
+                };
+                return _Worktime;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] GetPeriodWorktimeByEmployeeID: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<List<WorktimeDto>> GetWorkTimeHistoryByEmployeeID(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                int year = !string.IsNullOrEmpty(worktimeDto.WorkYear) ? int.Parse(worktimeDto.WorkYear) : DateTime.Now.Year;
+                int month = !string.IsNullOrEmpty(worktimeDto.WorkMonth) ? int.Parse(worktimeDto.WorkMonth) : DateTime.Now.Month;
+
+                var worktimes = await _context.Worktime
+                    .Include(w => w.Employee)
+                    .Where(w => w.EmployeeID == worktimeDto.EmployeeID
+                             && w.WorkDate.Year == year
+                             && w.WorkDate.Month == month)    // ✅ filter เดือนตรง ๆ
+                    .OrderByDescending(w => w.WorkDate)
+                    .ThenByDescending(w => w.TimeClockIn)
+                    .ToListAsync();
+
+                var worktimeDtos = worktimes.Select(w => new WorktimeDto
+                {
+                    WorktimeID = w.WorktimeID,
+                    EmployeeID = w.EmployeeID,
+                    EmployeeName = w.Employee?.Name ?? "",
+                    WorkDate = w.WorkDate.ToString("yyyy-MM-dd"),
+                    TimeClockIn = w.TimeClockIn?.ToString("HH:mm:ss"),
+                    TimeClockOut = w.TimeClockOut?.ToString("HH:mm:ss"),
+                    ClockInLocation = w.ClockInLocation,
+                    TotalWorktime = w.TotalWorktime,
+                    WageCost = w.WageCost,
+                    Bonus = w.Bonus,
+                    Price = w.Price,
+                    IsPurchase = w.IsPurchase,
+                    Remark = w.Remark,
+                    Active = w.Active
+                }).ToList();
+
+                return worktimeDtos;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] GetWorkTimeHistoryByEmployeeID: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<List<WorktimeDto>> GetWorkTimeHistoryByPeriod(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                int year = !string.IsNullOrEmpty(worktimeDto.WorkYear) ? int.Parse(worktimeDto.WorkYear) : DateTime.Now.Year;
+                int month = !string.IsNullOrEmpty(worktimeDto.WorkMonth) ? int.Parse(worktimeDto.WorkMonth) : DateTime.Now.Month;
+
+                DateOnly startDate;
+                if (DateOnly.TryParseExact(worktimeDto.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedStartDate))
+                    startDate = parsedStartDate;
+                else if (int.TryParse(worktimeDto.StartDate, out var day))
+                    startDate = new DateOnly(year, month, day);
+                else
+                    startDate = new DateOnly(year, month, 1);
+
+                DateOnly endDate;
+                if (DateOnly.TryParseExact(worktimeDto.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedEndDate))
+                    endDate = parsedEndDate;
+                else if (int.TryParse(worktimeDto.EndDate, out var endDay))
+                    endDate = new DateOnly(year, month, endDay);
+                else
+                    endDate = new DateOnly(year, month, DateTime.DaysInMonth(year, month));
+
+                var worktimes = await _context.Worktime
+                    .Include(w => w.Employee)
+                    .Where(w => w.WorkDate >= startDate
+                            && w.WorkDate <= endDate
+                            && w.Employee != null
+                            && w.Employee.UserPermistionID != 1) // Exclude owners
+                    .OrderByDescending(w => w.WorkDate)
+                    .ThenByDescending(w => w.TimeClockIn)
+                    .ToListAsync();
+
+                // สรุปข้อมูลรวมของแต่ละคน
+                var summary = worktimes
+                    .GroupBy(w => new { w.EmployeeID, Name = w.Employee?.Name ?? "" })
+                    .Select(g => new
+                    {
+                        EmployeeID = g.Key.EmployeeID,
+                        EmployeeName = g.Key.Name,
+                        TotalWorktime = g.Sum(x => x.TotalWorktime),
+                        TotalPrice = g.Sum(x => x.Price),
+                        TotalWageCost = g.Sum(x => x.WageCost),
+                        Details = g.Select(w => new WorktimeDto
+                        {
+                            WorktimeID = w.WorktimeID,
+                            EmployeeID = w.EmployeeID,
+                            EmployeeName = w.Employee?.Name ?? "",
+                            WorkDate = w.WorkDate.ToString("yyyy-MM-dd"),
+                            TimeClockIn = w.TimeClockIn?.ToString("HH:mm:ss"),
+                            TimeClockOut = w.TimeClockOut?.ToString("HH:mm:ss"),
+                            ClockInLocation = w.ClockInLocation,
+                            TotalWorktime = w.TotalWorktime,
+                            WageCost = w.WageCost,
+                            Bonus = w.Bonus,
+                            Price = w.Price,
+                            IsPurchase = w.IsPurchase,
+                            Remark = w.Remark,
+                            Active = w.Active
+                        }).ToList()
+                    }).ToList();
+
+                var result = summary.Select(s => new WorktimeDto
+                {
+                    EmployeeID = s.EmployeeID,
+                    EmployeeName = s.EmployeeName,
+                    TotalWorktime = s.TotalWorktime,
+                    Price = s.TotalPrice,
+                    WageCost = s.TotalWageCost,
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] GetWorkTimeHistoryByPeriod: {ex.Message}");
+                throw;
+            }
         }
     }
 }

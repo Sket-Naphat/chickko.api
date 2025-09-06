@@ -39,7 +39,7 @@ public class OrdersService : IOrdersService
         try
         {
             //await InitializeFirestore();
-
+            await _menuService.CopyMenusFromFirestore();
 
             var lastOrderDate = await _context.OrderHeaders.MaxAsync(o => o.OrderDate);
             var lastOrderDateString = lastOrderDate?.ToString("yyyy-MM-dd") ?? "";
@@ -97,28 +97,26 @@ public class OrdersService : IOrdersService
 
                     string dischargeName = "Promptpay"; // fallback default
 
-                    if (data.TryGetValue("dischargeType", out var dischargeRaw) && dischargeRaw != null)
+                    if (data.TryGetValue("dischargeType", out var dischargeRaw) && dischargeRaw != null && (dischargeRaw as string) != "")
                     {
                         dischargeName = dischargeRaw.ToString()!.Trim();
                     }
 
 
-                    Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.OrderTypeName == locName)!; // ตรวจสอบว่า OrderType มีอยู่ในฐานข้อมูลหรือไม่
-                    DischargeType _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == dischargeName)!;
-                    Table _Table = _context.Tables.FirstOrDefault(x => x.TableName == tableNumber)!; // ตรวจสอบว่า Table มีอยู่ในฐานข้อมูลหรือไม่
+                    Ordertype _OrderType = _context.Ordertypes.FirstOrDefault(x => x.OrderTypeName == locName) ?? new Ordertype();
+                    DischargeType _DischargeType = _context.DischargeTypes.FirstOrDefault(x => x.DischargeName == dischargeName) ?? new DischargeType();
+                    Table _Table = _context.Tables.FirstOrDefault(x => x.TableName == tableNumber) ?? new Table() { TableName = tableNumber };
 
                     var order = new OrderHeader
                     {
                         CustomerName = data["customerName"]?.ToString() ?? "ไม่ระบุชื้อ : " + data["orderDate"]?.ToString(),
-                        //OrderDate = DateOnly.TryParse(data["orderDate"]?.ToString(), out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now),
                         OrderDate = DateOnly.TryParseExact(data["orderDate"]?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now),
                         OrderTime = TimeOnly.TryParse(data["orderTime"]?.ToString(), out var orderTime) ? orderTime : TimeOnly.FromDateTime(DateTime.Now),
-                        OrderTypeId = _OrderType.OrderTypeId,
-                        OrderType = _OrderType, // ใช้ค่าเริ่มต้นถ้าไม่พบ
-                        DischargeTypeId = _DischargeType.DischargeTypeId,
-                        DischargeType = _DischargeType, // ใช้ค่าเริ่มต้นถ้าไม่พบ
+                        OrderTypeId = _OrderType?.OrderTypeId ?? 0,
+                        OrderType = _OrderType ?? new Ordertype(),
+                        DischargeTypeId = _DischargeType?.DischargeTypeId ?? 0,
+                        DischargeType = _DischargeType ?? new DischargeType(),
                         DischargeTime = TimeOnly.TryParse(data["dischargeTime"]?.ToString(), out var dTime) ? dTime : null,
-                        // IsDischarge = Convert.ToBoolean(data["discharge"]),
                         IsDischarge = data.TryGetValue("discharge", out var disVal) && bool.TryParse(disVal?.ToString(), out var isDischargeParsed) ? isDischargeParsed : false,
                         FinishOrderTime = TimeOnly.TryParse(data["finishedOrderTime"]?.ToString(), out var fTime) ? fTime : null,
                         IsFinishOrder = Convert.ToBoolean(data["finishedOrder"]),
@@ -127,8 +125,8 @@ public class OrdersService : IOrdersService
                         DiscountID = null,
                         Discount = null,
                         IdInFirestore = doc.Id,
-                        TableID = _Table.TableID,
-                        Table = _Table ?? new Table() { TableName = tableNumber }, // ใช้ค่าเริ่มต้นถ้าไม่พบ
+                        TableID = _Table?.TableID ?? 0,
+                        Table = _Table ?? new Table() { TableName = tableNumber },
                         ItemQTY = 0
                     };
 
