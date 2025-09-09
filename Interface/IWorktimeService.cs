@@ -9,5 +9,6 @@ namespace chickko.api.Interface
         Task<WorktimeDto> GetPeriodWorktimeByEmployeeID(WorktimeDto WorktimeDto);
         Task<List<WorktimeDto>> GetWorkTimeHistoryByEmployeeID(WorktimeDto WorktimeDto);
         Task<List<WorktimeDto>> GetWorkTimeHistoryByPeriod(WorktimeDto WorktimeDto);
+        Task<List<WorktimeDto>> GetWorkTimeCostByEmployeeIDandPeriod(WorktimeDto worktimeDto);
     }
 }

@@ -19,8 +19,10 @@ namespace chickko.api.Models
         public double Price { get; set; } = 0;
         public bool IsPurchase { get; set; } = false;
         public bool Active { get; set; } = true;
-        public string Remark { get; set; } = ""; 
-        public DateOnly UpdateDate { get; set; }  = DateOnly.FromDateTime(System.DateTime.Now); //วันที่ทำงาน
-        public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now); //วันที่ทำงาน
+        public string Remark { get; set; } = "";
+        public DateOnly UpdateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
+        public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
+        public int? CostID { get; set; } = null;
+        public Cost? Cost { get; set; } = null;
     }
 }

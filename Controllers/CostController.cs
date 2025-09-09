@@ -158,18 +158,18 @@ namespace chickko.api.controller
             }
         }
 
-        // [HttpPost("UpdateStockCost")]
-        // public async Task<IActionResult> UpdateStockCost(UpdateStockCostDto updateStockCostDto)
-        // {
-        //     try
-        //     {
-        //         await _costService.UpdateStockCost(updateStockCostDto);
-        //         return Ok();
-        //     }
-        //     catch (Exception ex)
-        //     {
-        //         return BadRequest(new { message = ex.Message });
-        //     }
-        // }
+        [HttpPost("UpdateWageCost")]
+        public async Task<IActionResult> UpdateWageCost(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                await _costService.UpdateWageCost(worktimeDto);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

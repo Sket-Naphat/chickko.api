@@ -90,5 +90,19 @@ namespace chickko.api.controller
                 return BadRequest("เกิดปัญหาในการดึงข้อมูลประวัติการทำงาน");
             }
         }
+        [HttpPost("GetWorkTimeCostByEmployeeIDandPeriod")]
+        public async Task<IActionResult> GetWorkTimeCostByEmployeeIDandPeriod(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.GetWorkTimeCostByEmployeeIDandPeriod(worktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการดึงข้อมูลต้นทุนการทำงาน");
+            }
+        }
     }
 }

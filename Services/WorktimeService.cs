@@ -311,5 +311,86 @@ namespace chickko.api.Services
                 throw;
             }
         }
+        public async Task<List<WorktimeDto>> GetWorkTimeCostByEmployeeIDandPeriod(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                int year = !string.IsNullOrEmpty(worktimeDto.WorkYear) ? int.Parse(worktimeDto.WorkYear) : DateTime.Now.Year;
+                int month = !string.IsNullOrEmpty(worktimeDto.WorkMonth) ? int.Parse(worktimeDto.WorkMonth) : DateTime.Now.Month;
+
+                DateOnly startDate;
+                if (DateOnly.TryParseExact(worktimeDto.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedStartDate))
+                    startDate = parsedStartDate;
+                else if (int.TryParse(worktimeDto.StartDate, out var day))
+                    startDate = new DateOnly(year, month, day);
+                else
+                    startDate = new DateOnly(year, month, 1);
+
+                DateOnly endDate;
+                if (DateOnly.TryParseExact(worktimeDto.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedEndDate))
+                    endDate = parsedEndDate;
+                else if (int.TryParse(worktimeDto.EndDate, out var endDay))
+                    endDate = new DateOnly(year, month, endDay);
+                else
+                    endDate = new DateOnly(year, month, DateTime.DaysInMonth(year, month));
+
+                var worktimes = await _context.Worktime
+                    .Include(w => w.Employee)
+                    .Where(w => w.WorkDate >= startDate
+                            && w.WorkDate <= endDate
+                            && w.Employee != null
+                            && w.Employee.UserPermistionID != 1 // Exclude owners
+                            && w.EmployeeID == worktimeDto.EmployeeID
+                            && w.IsPurchase == false) // เฉพาะพนักงานที่ระบุและยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
+                    .OrderByDescending(w => w.WorkDate)
+                    .ThenByDescending(w => w.TimeClockIn)
+                    .ToListAsync();
+
+                // สรุปข้อมูลรวมของแต่ละคน
+                var summary = worktimes
+                    .GroupBy(w => new { w.EmployeeID, Name = w.Employee?.Name ?? "" })
+                    .Select(g => new
+                    {
+                        EmployeeID = g.Key.EmployeeID,
+                        EmployeeName = g.Key.Name,
+                        TotalWorktime = g.Sum(x => x.TotalWorktime),
+                        TotalPrice = g.Sum(x => x.Price),
+                        TotalWageCost = g.Sum(x => x.WageCost),
+                        Details = g.Select(w => new WorktimeDto
+                        {
+                            WorktimeID = w.WorktimeID,
+                            EmployeeID = w.EmployeeID,
+                            EmployeeName = w.Employee?.Name ?? "",
+                            WorkDate = w.WorkDate.ToString("yyyy-MM-dd"),
+                            TimeClockIn = w.TimeClockIn?.ToString("HH:mm:ss"),
+                            TimeClockOut = w.TimeClockOut?.ToString("HH:mm:ss"),
+                            ClockInLocation = w.ClockInLocation,
+                            TotalWorktime = w.TotalWorktime,
+                            WageCost = w.WageCost,
+                            Bonus = w.Bonus,
+                            Price = w.Price,
+                            IsPurchase = w.IsPurchase,
+                            Remark = w.Remark,
+                            Active = w.Active
+                        }).ToList()
+                    }).ToList();
+
+                var result = summary.Select(s => new WorktimeDto
+                {
+                    EmployeeID = s.EmployeeID,
+                    EmployeeName = s.EmployeeName,
+                    TotalWorktime = s.TotalWorktime,
+                    Price = s.TotalPrice,
+                    WageCost = s.TotalWageCost,
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] GetWorkTimeHistoryByEmployeeID: {ex.Message}");
+                throw;
+            }
+        }
     }
 }
