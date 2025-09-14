@@ -457,4 +457,86 @@ public class OrdersService : IOrdersService
 
         return dailySales;
     }
+    public async Task<string> UpdateDeliveryRecords(DeliveryDto deliveryDto)
+    {
+        try
+        {
+            var existingRecord = await _context.Deliveries.FirstOrDefaultAsync(d => d.DeliveryId == deliveryDto.DeliveryId);
+            if (existingRecord != null)
+            {
+                // อัปเดตข้อมูลที่มีอยู่
+                existingRecord.TotalSales = deliveryDto.TotalSales;
+                existingRecord.NetSales = deliveryDto.NetSales;
+                existingRecord.GPPercent = deliveryDto.GPPercent;
+                existingRecord.GPAmount = deliveryDto.GPAmount;
+                existingRecord.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
+                existingRecord.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                existingRecord.UpdatedBy = deliveryDto.UpdatedBy;
+                existingRecord.Active = true;
+
+                _context.Deliveries.Update(existingRecord);
+                await _context.SaveChangesAsync();
+                return $"✅ อัปเดตข้อมูลการจัดส่งสำหรับวันที่ {deliveryDto.SaleDate} เรียบร้อยแล้ว";
+            }
+            else
+            {
+                // สร้างระเบียนใหม่
+                var newRecord = new Delivery
+                {
+                    SaleDate = deliveryDto.SaleDate,
+                    TotalSales = deliveryDto.TotalSales,
+                    NetSales = deliveryDto.NetSales,
+                    GPPercent = deliveryDto.GPPercent,
+                    GPAmount = deliveryDto.GPAmount,
+                    UpdateDate = DateOnly.FromDateTime(System.DateTime.Now),
+                    UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now),
+                    UpdatedBy = deliveryDto.UpdatedBy,
+                    Active = true
+                };
+
+                _context.Deliveries.Add(newRecord);
+                await _context.SaveChangesAsync();
+                return $"✅ เพิ่มข้อมูลการจัดส่งสำหรับวันที่ {deliveryDto.SaleDate} เรียบร้อยแล้ว";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ เกิดข้อผิดพลาดขณะอัปเดตข้อมูลการจัดส่ง");
+            if (ex.InnerException != null)
+            {
+                _logger.LogError("🔥 InnerException: " + ex.InnerException.Message);
+            }
+            return "❌ เกิดข้อผิดพลาด: " + ex.Message;
+        }
+    }
+    public async Task<List<DeliveryDto>> GetDeliveryRecords(DeliveryDto deliveryDto)
+    {
+        var query = _context.Deliveries.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(deliveryDto.SelectedMonth) && int.TryParse(deliveryDto.SelectedMonth, out int month))
+        {
+            query = query.Where(d => d.SaleDate.Month == month);
+        }
+
+        if (!string.IsNullOrWhiteSpace(deliveryDto.SelectedYear) && int.TryParse(deliveryDto.SelectedYear, out int year))
+        {
+            query = query.Where(d => d.SaleDate.Year == year);
+        }
+
+        var records = await query
+            .OrderByDescending(d => d.SaleDate)
+            .Select(d => new DeliveryDto
+            {
+                DeliveryId = d.DeliveryId,
+                SaleDate = d.SaleDate,
+                TotalSales = d.TotalSales,
+                NetSales = d.NetSales,
+                GPPercent = d.GPPercent,
+                GPAmount = d.GPAmount,
+                UpdatedBy = d.UpdatedBy
+            })
+            .ToListAsync();
+
+        return records;
+    }
 }

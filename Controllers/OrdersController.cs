@@ -50,5 +50,25 @@ namespace chickko.api.Controllers
                 data = result
             });
         }
+        [HttpPost("UpdateDeliveryRecords")]
+        public async Task<IActionResult> UpdateDeliveryRecords(DeliveryDto deliveryDto)
+        {
+            var result = await _ordersService.UpdateDeliveryRecords(deliveryDto);
+            return Ok(new
+            {
+                success = true,
+                message = result
+            });
+        }
+        [HttpPost("GetDeliveryRecords")]
+        public async Task<IActionResult> GetDeliveryRecords(DeliveryDto deliveryDto)
+        {
+            var result = await _ordersService.GetDeliveryRecords(deliveryDto);
+            return Ok(new
+            {
+                success = true,
+                data = result
+            });
+        }
     }
 }
