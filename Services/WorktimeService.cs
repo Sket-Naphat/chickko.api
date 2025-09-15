@@ -311,7 +311,7 @@ namespace chickko.api.Services
                 throw;
             }
         }
-        public async Task<List<WorktimeDto>> GetWorkTimeCostByEmployeeIDandPeriod(WorktimeDto worktimeDto)
+        public async Task<WorktimeSummaryDto> GetWorkTimeCostByEmployeeIDandPeriod(WorktimeDto worktimeDto)
         {
             try
             {
@@ -341,7 +341,7 @@ namespace chickko.api.Services
                             && w.Employee != null
                             && w.Employee.UserPermistionID != 1 // Exclude owners
                             && w.EmployeeID == worktimeDto.EmployeeID
-                            && w.IsPurchase == false) // เฉพาะพนักงานที่ระบุและยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
+                           ) // เฉพาะพนักงานที่ระบุและยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
                     .OrderByDescending(w => w.WorkDate)
                     .ThenByDescending(w => w.TimeClockIn)
                     .ToListAsync();
@@ -353,9 +353,11 @@ namespace chickko.api.Services
                     {
                         EmployeeID = g.Key.EmployeeID,
                         EmployeeName = g.Key.Name,
-                        TotalWorktime = g.Sum(x => x.TotalWorktime),
-                        TotalPrice = g.Sum(x => x.Price),
-                        TotalWageCost = g.Sum(x => x.WageCost),
+                        TotalWorktime = g.Where(x => x.IsPurchase == false).Sum(x => x.TotalWorktime),
+                        // TotalWageCost = g.Sum(x => x.WageCost),
+                        // ✅ แก้ไข: คิดเฉพาะรายการที่ยังไม่จ่าย (IsPurchase == false)
+                        TotalWageCost = g.Where(x => x.IsPurchase == false).Sum(x => x.WageCost),
+
                         Details = g.Select(w => new WorktimeDto
                         {
                             WorktimeID = w.WorktimeID,
@@ -375,16 +377,17 @@ namespace chickko.api.Services
                         }).ToList()
                     }).ToList();
 
-                var result = summary.Select(s => new WorktimeDto
+                var result = summary.Select(s => new WorktimeSummaryDto
                 {
                     EmployeeID = s.EmployeeID,
                     EmployeeName = s.EmployeeName,
                     TotalWorktime = s.TotalWorktime,
-                    Price = s.TotalPrice,
                     WageCost = s.TotalWageCost,
-                }).ToList();
+                     Worktimes = s.Details.ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
+                    // Worktimes = s.Details.Where(d => d.IsPurchase == true).ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
+                }).FirstOrDefault();
 
-                return result;
+                return result ?? new WorktimeSummaryDto();
             }
             catch (Exception ex)
             {

@@ -70,5 +70,15 @@ namespace chickko.api.Controllers
                 data = result
             });
         }
+        [HttpPost("GetDeliveryOrdersByDate")]
+        public async Task<IActionResult> GetDeliveryOrdersByDate(DeliveryDto deliveryDto)
+        {
+            var result = await _ordersService.GetDeliveryOrdersByDate(deliveryDto);
+            return Ok(new
+            {
+                success = true,
+                data = result
+            });
+        }
     }
 }

@@ -25,4 +25,14 @@ namespace chickko.api.Dtos
         public string? PurchaseDate { get; set; }
         public int? CreatedBy { get; set; }
     }
+
+    public class WorktimeSummaryDto
+    {
+        public int EmployeeID { get; set; }
+        public string EmployeeName { get; set; } = ""!;
+        public double TotalWorktime { get; set; } = 0;
+        public double WageCost { get; set; } = 0;
+        
+        public List<WorktimeDto> Worktimes { get; set; } = new();
+    }
 }
