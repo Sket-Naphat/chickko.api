@@ -171,5 +171,23 @@ namespace chickko.api.controller
                 return BadRequest(new { message = ex.Message });
             }
         }
+        //delete cost
+        [HttpDelete("DeleteCost/{id}")]
+        public async Task<IActionResult> DeleteCost(int id)
+        {
+            try
+            {
+                var result = await _costService.DeleteCost(id);
+                if (result == null)
+                {
+                    return NotFound();
+                }
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

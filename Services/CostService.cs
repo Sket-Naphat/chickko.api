@@ -289,11 +289,11 @@ namespace chickko.api.Services
         {
             // เริ่ม Database Transaction เพื่อป้องกันข้อมูลไม่สมบูรณ์
             using var transaction = await _context.Database.BeginTransactionAsync();
-            
+
             try
             {
                 // ขั้นตอนที่ 1: ตรวจสอบความถูกต้องของข้อมูลเข้า (Input Validation)
-                
+
                 // ตรวจสอบว่ามี EmployeeID และมีค่ามากกว่า 0
                 if (worktimeDto.EmployeeID <= 0)
                 {
@@ -307,10 +307,10 @@ namespace chickko.api.Services
                 }
 
                 // ขั้นตอนที่ 2: แปลงและตรวจสอบรูปแบบวันที่ (Date Parsing & Validation)
-                
+
                 // กำหนดวันที่จ่ายเงิน: ใช้ PurchaseDate ที่ส่งมา หรือวันที่ปัจจุบันถ้าไม่มี
                 var purchaseDate = worktimeDto.PurchaseDate ?? DateTime.Now.ToString("yyyy-MM-dd");
-                
+
                 // แปลงและตรวจสอบรูปแบบวันที่จ่ายเงิน (ต้องเป็น yyyy-MM-dd)
                 if (!DateOnly.TryParseExact(purchaseDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var costDate))
                 {
@@ -318,7 +318,7 @@ namespace chickko.api.Services
                 }
 
                 DateOnly startDate, endDate;
-                
+
                 // แปลงและตรวจสอบวันที่เริ่มต้น (StartDate)
                 if (!string.IsNullOrEmpty(worktimeDto.StartDate))
                 {
@@ -356,7 +356,7 @@ namespace chickko.api.Services
                 }
 
                 // ขั้นตอนที่ 3: สร้างข้อมูลค่าใช้จ่าย (Create Cost Record)
-                
+
                 var cost = new Cost
                 {
                     CostCategoryID = 2, // หมวดหมู่ค่าแรง (Wage category)
@@ -383,7 +383,7 @@ namespace chickko.api.Services
                 _logger.LogInformation($"💰 Created Cost ID: {createdCost.CostId} for Employee {worktimeDto.EmployeeID}");
 
                 // ขั้นตอนที่ 4: ค้นหาและอัปเดตข้อมูลการทำงาน (Update Worktime Records)
-                
+
                 // ค้นหาข้อมูลการทำงานของพนักงานในช่วงวันที่ที่กำหนด
                 var worktimes = await _context.Worktime
                     .Include(w => w.Employee) // รวมข้อมูลพนักงาน
@@ -413,27 +413,27 @@ namespace chickko.api.Services
                 }
 
                 // ขั้นตอนที่ 5: บันทึกการเปลี่ยนแปลงและยืนยัน Transaction
-                
+
                 // บันทึกการเปลี่ยนแปลงทั้งหมดลงฐานข้อมูล
                 await _context.SaveChangesAsync();
-                
+
                 _logger.LogInformation($"✅ Updated {totalUpdated} worktime records with Cost ID: {createdCost.CostId}");
 
                 // ยืนยัน Transaction (Commit) - ทำให้การเปลี่ยนแปลงถาวร
                 await transaction.CommitAsync();
-                
+
                 _logger.LogInformation($"🎯 UpdateWageCost completed successfully for Employee {worktimeDto.EmployeeID}");
             }
             catch (Exception ex)
             {
                 // ขั้นตอนที่ 6: จัดการข้อผิดพลาด (Error Handling)
-                
+
                 // ยกเลิก Transaction (Rollback) - เพื่อคืนข้อมูลกลับสู่สถานะเดิม
                 await transaction.RollbackAsync();
-                
+
                 // บันทึก Error Log
                 _logger.LogError(ex, "❌ UpdateWageCost failed for Employee {EmployeeID}", worktimeDto.EmployeeID);
-                
+
                 // ส่ง Exception ต่อไปยัง caller
                 throw;
             }
@@ -484,6 +484,34 @@ namespace chickko.api.Services
             }
         }
         #endregion
+
+       public async Task<string> DeleteCost(int costId)
+       {
+           try
+           {
+               var cost = await _context.Cost.FirstOrDefaultAsync(c => c.CostId == costId);
+               if (cost == null)
+               {
+                   return $"ไม่พบค่าใช้จ่ายที่มี ID: {costId}";
+               }
+
+               // ตรวจสอบว่ามีการเชื่อมโยงกับ Worktime หรือไม่
+               var linkedWorktimes = await _context.Worktime.AnyAsync(w => w.CostID == costId);
+               if (linkedWorktimes)
+               {
+                   return $"ไม่สามารถลบค่าใช้จ่ายที่มี ID: {costId} เนื่องจากมีการเชื่อมโยงกับข้อมูลการทำงาน";
+               }
+
+               _context.Cost.Remove(cost);
+               await _context.SaveChangesAsync();
+               return $"ลบค่าใช้จ่ายที่มี ID: {costId} เรียบร้อยแล้ว";
+           }
+           catch (Exception ex)
+           {
+               _logger.LogError(ex, "เกิดข้อผิดพลาดในการลบค่าใช้จ่ายที่มี ID: {CostId}", costId);
+               throw;
+           }
+       }
 
     }
 }
