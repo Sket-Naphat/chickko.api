@@ -24,6 +24,7 @@ namespace chickko.api.Dtos
         public CostStatus? CostStatus { get; set; } = null!; // ใช้เพื่อบอกสถานะการจ่ายเงิน
         public bool? IsActive { get; set; } // ใช้เพื่อบอกว่าต้นทุนนี้ยังใช้งานอยู่หรือไม่
         public int? UpdateBy { get; set; } // ID ของผู้ที่แก้ไขต้นทุน
+        public bool? IsStockIn { get; set; } // ใช้เพื่อบอกว่าต้นทุนนี้ถูกใช้ในการเพิ่มสต็อกหรือไม่
     }
     public class UpdateStockCostDto
     {

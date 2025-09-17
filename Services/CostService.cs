@@ -117,17 +117,21 @@ namespace chickko.api.Services
             {
                 foreach (var cost in _cost)
                 {
-                    CostDto.Add(new CostDto
+                    if (CheckHaveItemInStockCost(cost.CostId))
                     {
-                        CostID = cost.CostId,
-                        CostCategoryID = cost.CostCategoryID,
-                        CostPrice = cost.CostPrice,
-                        CostDescription = cost.CostDescription ?? "",
-                        CostDate = cost.CostDate,
-                        CostTime = cost.CostTime,
-                        CostStatusID = cost.CostStatusID,
-                        CostStatus = cost.CostStatus
-                    });
+                        CostDto.Add(new CostDto
+                        {
+                            CostID = cost.CostId,
+                            CostCategoryID = cost.CostCategoryID,
+                            CostPrice = cost.CostPrice,
+                            CostDescription = cost.CostDescription ?? "",
+                            CostDate = cost.CostDate,
+                            CostTime = cost.CostTime,
+                            CostStatusID = cost.CostStatusID,
+                            CostStatus = cost.CostStatus
+                        });
+                    }
+
                 }
             }
             return CostDto;
@@ -461,21 +465,38 @@ namespace chickko.api.Services
 
                 var costs = await query.OrderByDescending(c => c.CostDate).ThenByDescending(c => c.CostTime).ToListAsync();
 
-                return costs.Select(c => new CostDto
+                var result = costs.Select(c =>
                 {
-                    CostID = c.CostId,
-                    CostCategoryID = c.CostCategoryID,
-                    costCategory = c.CostCategory,
-                    CostPrice = c.CostPrice,
-                    CostDescription = c.CostDescription ?? string.Empty,
-                    CostDate = c.CostDate,
-                    CostTime = c.CostTime,
-                    UpdateDate = c.UpdateDate,
-                    UpdateTime = c.UpdateTime,
-                    IsPurchase = c.IsPurchase,
-                    CostStatusID = c.CostStatusID,
-                    CostStatus = c.CostStatus,
+                    var dto = new CostDto
+                    {
+                        CostID = c.CostId,
+                        CostCategoryID = c.CostCategoryID,
+                        costCategory = c.CostCategory,
+                        CostPrice = c.CostPrice,
+                        CostDescription = c.CostDescription ?? string.Empty,
+                        CostDate = c.CostDate,
+                        CostTime = c.CostTime,
+                        UpdateDate = c.UpdateDate,
+                        UpdateTime = c.UpdateTime,
+                        IsPurchase = c.IsPurchase,
+                        CostStatusID = c.CostStatusID,
+                        CostStatus = c.CostStatus,
+                    };
+
+                    // ✅ เงื่อนไขพิเศษสำหรับ CostCategoryID = 1 // Stock Cost
+                    if (c.CostCategoryID == 1)
+                    {
+                        dto.IsStockIn = CheckHaveItemInStockCost(c.CostId);
+                    }
+                    else
+                    {
+                        dto.IsStockIn = false; // กรณีไม่ใช่ Stock Cost ให้ตั้งค่าเป็น false
+                    }
+
+                    return dto;
                 }).ToList();
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -483,35 +504,58 @@ namespace chickko.api.Services
                 throw;
             }
         }
+
+        public bool CheckHaveItemInStockCost(int costId)
+        {
+            try
+            {
+                // ตรวจสอบว่ามีการเชื่อมโยงกับ StockLog หรือไม่
+                var linkedStockLogs = _context.StockLog.Any(w => w.CostId == costId);
+
+                if (linkedStockLogs)
+                {
+                    return true; // มีการเชื่อมโยง
+                }
+                else
+                {
+                    return false; // ไม่มีการเชื่อมโยง
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการตรวจสอบการเชื่อมโยงค่าใช้จ่ายกับข้อมูลการทำงานที่มี ID: {CostId}", costId);
+                throw;
+            }
+        }
         #endregion
 
-       public async Task<string> DeleteCost(int costId)
-       {
-           try
-           {
-               var cost = await _context.Cost.FirstOrDefaultAsync(c => c.CostId == costId);
-               if (cost == null)
-               {
-                   return $"ไม่พบค่าใช้จ่ายที่มี ID: {costId}";
-               }
+        public async Task<string> DeleteCost(int costId)
+        {
+            try
+            {
+                var cost = await _context.Cost.FirstOrDefaultAsync(c => c.CostId == costId);
+                if (cost == null)
+                {
+                    return $"ไม่พบค่าใช้จ่ายที่มี ID: {costId}";
+                }
 
-               // ตรวจสอบว่ามีการเชื่อมโยงกับ Worktime หรือไม่
-               var linkedWorktimes = await _context.Worktime.AnyAsync(w => w.CostID == costId);
-               if (linkedWorktimes)
-               {
-                   return $"ไม่สามารถลบค่าใช้จ่ายที่มี ID: {costId} เนื่องจากมีการเชื่อมโยงกับข้อมูลการทำงาน";
-               }
+                // ตรวจสอบว่ามีการเชื่อมโยงกับ Worktime หรือไม่
+                var linkedWorktimes = await _context.Worktime.AnyAsync(w => w.CostID == costId);
+                if (linkedWorktimes)
+                {
+                    return $"ไม่สามารถลบค่าใช้จ่ายที่มี ID: {costId} เนื่องจากมีการเชื่อมโยงกับข้อมูลการทำงาน";
+                }
 
-               _context.Cost.Remove(cost);
-               await _context.SaveChangesAsync();
-               return $"ลบค่าใช้จ่ายที่มี ID: {costId} เรียบร้อยแล้ว";
-           }
-           catch (Exception ex)
-           {
-               _logger.LogError(ex, "เกิดข้อผิดพลาดในการลบค่าใช้จ่ายที่มี ID: {CostId}", costId);
-               throw;
-           }
-       }
+                _context.Cost.Remove(cost);
+                await _context.SaveChangesAsync();
+                return $"ลบค่าใช้จ่ายที่มี ID: {costId} เรียบร้อยแล้ว";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการลบค่าใช้จ่ายที่มี ID: {CostId}", costId);
+                throw;
+            }
+        }
 
     }
 }
