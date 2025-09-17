@@ -51,13 +51,16 @@ namespace chickko.api.Services
                 var token = GenerateJwtToken(user, currentSite);
 
                 // บันทึก log การเข้าสู่ระบบ (ถ้าต้องการ)
-                var loginLog = new LoginLog
+                if (user.UserId != 1 && user.UserId != 3 && user.UserId != 4)
                 {
-                    UserId = user.UserId,
-                    LoginDate = DateOnly.FromDateTime(System.DateTime.Now),
-                    LoginTime = TimeOnly.FromDateTime(System.DateTime.Now)
-                };
-                await InsertLoginLog(loginLog);
+                    var loginLog = new LoginLog
+                    {
+                        UserId = user.UserId,
+                        LoginDate = DateOnly.FromDateTime(System.DateTime.Now),
+                        LoginTime = TimeOnly.FromDateTime(System.DateTime.Now)
+                    };
+                    await InsertLoginLog(loginLog);
+                }
                 return new
                 {
                     success = true,
@@ -106,38 +109,38 @@ namespace chickko.api.Services
             var result = false;
             try
             {
-            // เลือก site ที่จะบันทึก: ถ้า request.Site มีค่า ให้ใช้ค่านั้น, ถ้าไม่มีก็ใช้ currentSite จาก SiteService
-            var selectedSite = !string.IsNullOrWhiteSpace(request.Site)
-                ? request.Site.ToUpperInvariant()
-                : _siteService.GetCurrentSite();
+                // เลือก site ที่จะบันทึก: ถ้า request.Site มีค่า ให้ใช้ค่านั้น, ถ้าไม่มีก็ใช้ currentSite จาก SiteService
+                var selectedSite = !string.IsNullOrWhiteSpace(request.Site)
+                    ? request.Site.ToUpperInvariant()
+                    : _siteService.GetCurrentSite();
 
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-                throw new Exception("Username already exists");
+                if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+                    throw new Exception("Username already exists");
 
-            var user = new User
-            {
-                Username = request.Username,
-                Password = request.Password,
-                Name = request.Name,
-                DateOfBirth = DateTime.SpecifyKind(request.DateOfBirth, DateTimeKind.Utc),
-                StartWorkDate = DateTime.SpecifyKind(request.StartWorkDate, DateTimeKind.Utc),
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                UserPermistionID = 3,
-                Contact = "",
-                IsActive = true,
-                Site = selectedSite // ใช้ site ที่เลือกไว้
-            };
+                var user = new User
+                {
+                    Username = request.Username,
+                    Password = request.Password,
+                    Name = request.Name,
+                    DateOfBirth = DateTime.SpecifyKind(request.DateOfBirth, DateTimeKind.Utc),
+                    StartWorkDate = DateTime.SpecifyKind(request.StartWorkDate, DateTimeKind.Utc),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    UserPermistionID = 3,
+                    Contact = "",
+                    IsActive = true,
+                    Site = selectedSite // ใช้ site ที่เลือกไว้
+                };
 
-            user.Password = _passwordHasher.HashPassword(user, request.Password);
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            result = true;
+                user.Password = _passwordHasher.HashPassword(user, request.Password);
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+                result = true;
             }
             catch (Exception ex)
             {
-            result = false;
-            throw new Exception("Registration failed: " + ex.Message);
+                result = false;
+                throw new Exception("Registration failed: " + ex.Message);
             }
             return result;
         }

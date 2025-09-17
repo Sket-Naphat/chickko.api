@@ -104,5 +104,33 @@ namespace chickko.api.controller
                 return BadRequest("เกิดปัญหาในการดึงข้อมูลต้นทุนการทำงาน");
             }
         }
+        [HttpPost("UpdateTimeClockIn")]
+        public async Task<IActionResult> UpdateTimeClockIn(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.UpdateTimeClockIn(worktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการแก้ไขเวลาลงเวลาเข้างาน");
+            }
+        }
+        [HttpPost("UpdateTimeClockOut")]
+        public async Task<IActionResult> UpdateTimeClockOut(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.UpdateTimeClockOut(worktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการแก้ไขเวลาลงเวลาออกงาน");
+            }
+        }
     }
 }

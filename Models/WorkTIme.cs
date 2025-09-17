@@ -21,8 +21,9 @@ namespace chickko.api.Models
         public bool IsPurchase { get; set; } = false;
         public bool Active { get; set; } = true;
         public string Remark { get; set; } = "";
-        public DateOnly UpdateDate { get; set; } = DateOnly.FromDateTime(System.DateTime.Now);
-        public TimeOnly UpdateTime { get; set; } = TimeOnly.FromDateTime(System.DateTime.Now);
+        public DateOnly? UpdateDate { get; set; }
+        public TimeOnly? UpdateTime { get; set; }
+        public int? UpdateBy { get; set; }
         public int? CostID { get; set; } = null;
         public Cost? Cost { get; set; } = null;
     }

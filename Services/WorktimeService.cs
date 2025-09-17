@@ -43,8 +43,8 @@ namespace chickko.api.Services
                         IsPurchase = false,
                         ClockInLocation = WorktimeDto.ClockInLocation ?? string.Empty,
                         TotalWorktime = 0,
-                        UpdateDate = DateOnly.FromDateTime(DateTime.Now),
-                        UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
+                        // UpdateDate = DateOnly.FromDateTime(DateTime.Now),
+                        // UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
                     };
 
 
@@ -90,8 +90,8 @@ namespace chickko.api.Services
                     _Worktime.TimeClockOut = timeClockOut;
                     _Worktime.ClockOutLocation = WorktimeDto.ClockOutLocation ?? string.Empty;
                     _Worktime.TotalWorktime = 0;
-                    _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                    _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                    // _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                    // _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
 
 
                     if (_Worktime?.TimeClockIn != null && _Worktime.TimeClockOut != null)
@@ -387,7 +387,7 @@ namespace chickko.api.Services
                     EmployeeName = s.EmployeeName,
                     TotalWorktime = s.TotalWorktime,
                     WageCost = s.TotalWageCost,
-                     Worktimes = s.Details.ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
+                    Worktimes = s.Details.ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
                     // Worktimes = s.Details.Where(d => d.IsPurchase == true).ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
                 }).FirstOrDefault();
 
@@ -396,6 +396,155 @@ namespace chickko.api.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERROR] GetWorkTimeHistoryByEmployeeID: {ex.Message}");
+                throw;
+            }
+        }
+        public async Task<string> UpdateTimeClockIn(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(worktimeDto.TimeClockIn) && !string.IsNullOrEmpty(worktimeDto.WorkDate))
+                {
+                    var parsed = DateOnly.TryParseExact(worktimeDto.WorkDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate);
+                    DateOnly WorkDate = parsed ? orderDate : DateOnly.FromDateTime(DateTime.Now);
+                    TimeOnly? timeClockIn = TimeOnly.ParseExact(worktimeDto.TimeClockIn, "HH:mm:ss");
+
+                    var _Worktime = await _context.Worktime.FirstOrDefaultAsync(w => w.WorkDate == WorkDate && w.EmployeeID == worktimeDto.EmployeeID);
+                    var _Employee = await _context.Users.Include(u => u.UserPermistion).FirstOrDefaultAsync(e => e.UserId == worktimeDto.EmployeeID);
+                    if (_Worktime == null)
+                    {
+                        return "ไม่พบข้อมูลการลงเวลาของพนักงานในวันที่ระบุ !";
+                    }
+                    else
+                    {
+                        if (_Worktime.TimeClockOut != null)
+                        {
+                            // ถ้ามีเวลาออกงานแล้ว คำนวณเวลาทำงานใหม่
+
+                            var clockIn = timeClockIn.Value.ToTimeSpan();
+                            var clockOut = _Worktime.TimeClockOut.Value.ToTimeSpan();
+
+                            if (clockOut < clockIn)
+                            {
+                                clockOut = clockOut.Add(TimeSpan.FromDays(1));
+                            }
+
+                            // var totalHours = (clockOut - clockIn).TotalHours;
+                            var totalHours = Math.Round((clockOut - clockIn).TotalHours, 2);
+                            _Worktime.TotalWorktime = totalHours;
+                            double CostWage = 0;
+
+                            if (_Employee != null && _Employee.UserPermistion != null && _Employee.UserPermistion.UserPermistionID == 1) //owner
+                            {
+                                CostWage = _Employee.UserPermistion.WageCost;
+                            }
+                            else if (_Employee != null && _Employee.UserPermistion != null)
+                            {
+                                CostWage = totalHours * _Employee.UserPermistion.WageCost; //employee
+                            }
+                            else
+                            {
+                                CostWage = 0; // or handle the case where UserPermistion is null
+                            }
+                            // _Worktime.WageCost = CostWage;
+                            _Worktime.WageCost = Math.Ceiling(CostWage);
+
+                        }
+
+                        _Worktime.TimeClockIn = timeClockIn;
+                        _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                        _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                        _Worktime.UpdateBy = worktimeDto.CreatedBy;
+
+                        await _context.SaveChangesAsync();
+
+                        return "อัปเดตเวลาเข้างานสำเร็จ !";
+                    }
+                }
+                else
+                {
+                    return "ข้อมูลเวลาเข้างานไม่ถูกต้อง !";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] UpdateTimeClockIn: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task<string> UpdateTimeClockOut(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(worktimeDto.TimeClockOut) && !string.IsNullOrEmpty(worktimeDto.WorkDate))
+                {
+                    var parsed = DateOnly.TryParseExact(worktimeDto.WorkDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate);
+                    DateOnly WorkDate = parsed ? orderDate : DateOnly.FromDateTime(DateTime.Now);
+                    TimeOnly? timeClockOut = TimeOnly.ParseExact(worktimeDto.TimeClockOut, "HH:mm:ss");
+
+                    var _Worktime = await _context.Worktime.FirstOrDefaultAsync(w => w.WorkDate == WorkDate && w.EmployeeID == worktimeDto.EmployeeID);
+                    var _Employee = await _context.Users.Include(u => u.UserPermistion).FirstOrDefaultAsync(e => e.UserId == worktimeDto.EmployeeID);
+                    if (_Worktime == null)
+                    {
+                        return "ไม่พบข้อมูลการลงเวลาของพนักงานในวันที่ระบุ !";
+                    }
+                    else
+                    {
+                        if (_Worktime.TimeClockIn != null)
+                        {
+                            // ถ้ามีเวลาออกงานแล้ว คำนวณเวลาทำงานใหม่
+
+                            var clockIn = _Worktime.TimeClockIn.Value.ToTimeSpan();
+                            var clockOut = timeClockOut.Value.ToTimeSpan();
+
+                            if (clockOut < clockIn)
+                            {
+                                clockOut = clockOut.Add(TimeSpan.FromDays(1));
+                            }
+
+                            // var totalHours = (clockOut - clockIn).TotalHours;
+                            var totalHours = Math.Round((clockOut - clockIn).TotalHours, 2);
+                            _Worktime.TotalWorktime = totalHours;
+                            double CostWage = 0;
+
+                            if (_Employee != null && _Employee.UserPermistion != null && _Employee.UserPermistion.UserPermistionID == 1) //owner
+                            {
+                                CostWage = _Employee.UserPermistion.WageCost;
+                            }
+                            else if (_Employee != null && _Employee.UserPermistion != null)
+                            {
+                                CostWage = totalHours * _Employee.UserPermistion.WageCost; //employee
+                            }
+                            else
+                            {
+                                CostWage = 0; // or handle the case where UserPermistion is null
+                            }
+                            // _Worktime.WageCost = CostWage;
+                            _Worktime.WageCost = Math.Ceiling(CostWage);
+
+                        }
+
+                        _Worktime.TimeClockOut = timeClockOut;
+                        _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
+                        _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                        _Worktime.UpdateBy = worktimeDto.CreatedBy;
+
+                        await _context.SaveChangesAsync();
+
+                        return "อัปเดตเวลาออกงานสำเร็จ !";
+                    }
+                }
+                else
+                {
+                    return "ข้อมูลเวลาออกงานไม่ถูกต้อง !";
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] UpdateTimeClockIn: {ex.Message}");
                 throw;
             }
         }
