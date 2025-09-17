@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20250917015644_AddFieldLogOutLocation")]
+    partial class AddFieldLogOutLocation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -320,30 +323,6 @@ namespace chickko.api.Migrations
                     b.ToTable((string)null);
 
                     b.ToView(null, (string)null);
-                });
-
-            modelBuilder.Entity("chickko.api.Models.LoginLog", b =>
-                {
-                    b.Property<int>("LoginLogId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("LoginLogId"));
-
-                    b.Property<DateOnly>("LoginDate")
-                        .HasColumnType("date");
-
-                    b.Property<TimeOnly>("LoginTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("LoginLogId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("LoginLogs");
                 });
 
             modelBuilder.Entity("chickko.api.Models.Menu", b =>
@@ -1026,17 +1005,6 @@ namespace chickko.api.Migrations
                     b.Navigation("CostCategory");
 
                     b.Navigation("CostStatus");
-                });
-
-            modelBuilder.Entity("chickko.api.Models.LoginLog", b =>
-                {
-                    b.HasOne("chickko.api.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("chickko.api.Models.Menu", b =>

@@ -13,6 +13,7 @@ namespace chickko.api.Models
         public int EmployeeID { get; set; }
         public User Employee { get; set; } = null!;
         public string ClockInLocation { get; set; } = "";
+        public string ClockOutLocation { get; set; } = "";
         public double TotalWorktime { get; set; } = 0;
         public double WageCost { get; set; } = 0!;
         public double Bonus { get; set; } = 0;

@@ -8,7 +8,8 @@ namespace chickko.api.Dtos
         public string? WorkDate { get; set; }
         public string? TimeClockIn { get; set; }
         public string? TimeClockOut { get; set; }
-        public string ClockInLocation { get; set; } = "";
+        public string? ClockInLocation { get; set; } = "";
+        public string? ClockOutLocation { get; set; } = "";
         public double TotalWorktime { get; set; } = 0;
         public double WageCost { get; set; } = 0!;
         public double Bonus { get; set; } = 0;

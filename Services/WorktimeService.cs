@@ -41,7 +41,7 @@ namespace chickko.api.Services
                         TimeClockIn = timeClockIn,
                         Active = true,
                         IsPurchase = false,
-                        ClockInLocation = "",
+                        ClockInLocation = WorktimeDto.ClockInLocation ?? string.Empty,
                         TotalWorktime = 0,
                         UpdateDate = DateOnly.FromDateTime(DateTime.Now),
                         UpdateTime = TimeOnly.FromDateTime(DateTime.Now),
@@ -88,7 +88,7 @@ namespace chickko.api.Services
                 {
                     // _Worktime.EmployeeID = WorktimeDto.EmployeeID;
                     _Worktime.TimeClockOut = timeClockOut;
-                    _Worktime.ClockInLocation = "";
+                    _Worktime.ClockOutLocation = WorktimeDto.ClockOutLocation ?? string.Empty;
                     _Worktime.TotalWorktime = 0;
                     _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
                     _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
@@ -181,6 +181,7 @@ namespace chickko.api.Services
                     TimeClockIn = worktimes.TimeClockIn?.ToString("HH:mm:ss"),
                     TimeClockOut = worktimes.TimeClockOut?.ToString("HH:mm:ss"),
                     ClockInLocation = worktimes.ClockInLocation,
+                    ClockOutLocation = worktimes.ClockOutLocation,
                 };
                 return _Worktime;
             }
@@ -215,6 +216,7 @@ namespace chickko.api.Services
                     TimeClockIn = w.TimeClockIn?.ToString("HH:mm:ss"),
                     TimeClockOut = w.TimeClockOut?.ToString("HH:mm:ss"),
                     ClockInLocation = w.ClockInLocation,
+                    ClockOutLocation = w.ClockOutLocation,
                     TotalWorktime = w.TotalWorktime,
                     WageCost = w.WageCost,
                     Bonus = w.Bonus,
@@ -284,6 +286,7 @@ namespace chickko.api.Services
                             TimeClockIn = w.TimeClockIn?.ToString("HH:mm:ss"),
                             TimeClockOut = w.TimeClockOut?.ToString("HH:mm:ss"),
                             ClockInLocation = w.ClockInLocation,
+                            ClockOutLocation = w.ClockOutLocation,
                             TotalWorktime = w.TotalWorktime,
                             WageCost = w.WageCost,
                             Bonus = w.Bonus,
@@ -367,6 +370,7 @@ namespace chickko.api.Services
                             TimeClockIn = w.TimeClockIn?.ToString("HH:mm:ss"),
                             TimeClockOut = w.TimeClockOut?.ToString("HH:mm:ss"),
                             ClockInLocation = w.ClockInLocation,
+                            ClockOutLocation = w.ClockOutLocation,
                             TotalWorktime = w.TotalWorktime,
                             WageCost = w.WageCost,
                             Bonus = w.Bonus,

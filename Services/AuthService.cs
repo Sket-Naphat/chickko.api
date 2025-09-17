@@ -50,6 +50,14 @@ namespace chickko.api.Services
 
                 var token = GenerateJwtToken(user, currentSite);
 
+                // บันทึก log การเข้าสู่ระบบ (ถ้าต้องการ)
+                var loginLog = new LoginLog
+                {
+                    UserId = user.UserId,
+                    LoginDate = DateOnly.FromDateTime(System.DateTime.Now),
+                    LoginTime = TimeOnly.FromDateTime(System.DateTime.Now)
+                };
+                await InsertLoginLog(loginLog);
                 return new
                 {
                     success = true,
@@ -133,7 +141,11 @@ namespace chickko.api.Services
             }
             return result;
         }
-
+        public async Task InsertLoginLog(LoginLog loginLog)
+        {
+            _context.LoginLogs.Add(loginLog);
+            await _context.SaveChangesAsync();
+        }
         // ================== ฟังก์ชันเดิม (เลิกใช้ คอมเมนต์เก็บไว้) ===================
         /*
         public User? Login(string username, string password) { ... }
