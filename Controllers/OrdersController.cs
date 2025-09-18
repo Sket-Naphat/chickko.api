@@ -50,6 +50,16 @@ namespace chickko.api.Controllers
                 data = result
             });
         }
+        [HttpGet("GetDailyDeliverySalesReport")]
+        public async Task<IActionResult> GetDailyDeliverySalesReport(DateOnly date)
+        {
+            var result = await _ordersService.GetDailyDeliverySalesReport(date);
+            return Ok(new
+            {
+                success = true,
+                data = result
+            });
+        }
         [HttpPost("UpdateDeliveryRecords")]
         public async Task<IActionResult> UpdateDeliveryRecords(DeliveryDto deliveryDto)
         {
@@ -74,6 +84,16 @@ namespace chickko.api.Controllers
         public async Task<IActionResult> GetDeliveryOrdersByDate(DeliveryDto deliveryDto)
         {
             var result = await _ordersService.GetDeliveryOrdersByDate(deliveryDto);
+            return Ok(new
+            {
+                success = true,
+                data = result
+            });
+        }
+        [HttpPost("GetIncomeOrdersByDate")]
+        public async Task<IActionResult> GetIncomeOrdersByDate(IncomeDto incomeDto)
+        {
+            var result = await _ordersService.GetIncomeOrdersByDate(incomeDto);
             return Ok(new
             {
                 success = true,

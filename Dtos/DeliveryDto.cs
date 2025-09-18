@@ -9,6 +9,7 @@ public class DeliveryDto
     public int? UpdatedBy { get; set; } // 8. ผู้ที่อัปเดต
     public string? SelectedMonth { get; set; } // For filtering by month
     public string? SelectedYear { get; set; } // For filtering by year
+    public int? totalOrders { get; set; } // For total orders in the month
 }
 
 public class DeliveryOrdersDTO

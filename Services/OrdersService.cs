@@ -440,7 +440,9 @@ public class OrdersService : IOrdersService
     }
     public async Task<List<DailySaleDto>> GetDailyDineInSalesReport(DateOnly date)
     {
-        var dailySales = await _context.OrderHeaders
+        try
+        {
+            var dailySales = await _context.OrderHeaders
             .Where(oh => oh.OrderTypeId != 3)   // กรองยอดขายหน้าร้าน
                                                 //.Where(oh => oh.IsFinishOrder == true) // ถ้าต้องการเฉพาะที่ปิดบิลแล้ว
             .GroupBy(oh => oh.OrderDate)
@@ -455,7 +457,47 @@ public class OrdersService : IOrdersService
             .OrderByDescending(x => x.SaleDate)
             .ToListAsync();
 
-        return dailySales;
+            return dailySales;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ เกิดข้อผิดพลาดขณะดึงรายงานยอดขายหน้าร้าน");
+            if (ex.InnerException != null)
+            {
+                _logger.LogError("🔥 InnerException: " + ex.InnerException.Message);
+            }
+            return new List<DailySaleDto>();
+        }
+
+    }
+    public async Task<List<DailySaleDto>> GetDailyDeliverySalesReport(DateOnly date)
+    {
+        try
+        {
+            var dailySales = await _context.Deliveries
+           .GroupBy(oh => oh.SaleDate)
+           .Select(g => new DailySaleDto
+           {
+               SaleDate = g.Key,
+               Orders = g.Count(),
+               TotalAmount = g.Sum(x => (decimal?)x.NetSales) ?? 0,
+               AvgPerOrder = 0
+           })
+           .OrderByDescending(x => x.SaleDate)
+           .ToListAsync();
+
+            return dailySales;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "❌ เกิดข้อผิดพลาดขณะดึงรายงานยอดขายเดลิเวอรี่");
+            if (ex.InnerException != null)
+            {
+                _logger.LogError("🔥 InnerException: " + ex.InnerException.Message);
+            }
+            return new List<DailySaleDto>();
+        }
+
     }
     public async Task<string> UpdateDeliveryRecords(DeliveryDto deliveryDto)
     {
@@ -533,7 +575,8 @@ public class OrdersService : IOrdersService
                 NetSales = d.NetSales,
                 GPPercent = d.GPPercent,
                 GPAmount = d.GPAmount,
-                UpdatedBy = d.UpdatedBy
+                UpdatedBy = d.UpdatedBy,
+                totalOrders = _context.OrderHeaders.Count(oh => oh.OrderDate == d.SaleDate && oh.OrderTypeId == 3)
             })
             .ToListAsync();
 
@@ -553,7 +596,7 @@ public class OrdersService : IOrdersService
             var query = from oh in _context.OrderHeaders
                         join ot in _context.Ordertypes on oh.OrderTypeId equals ot.OrderTypeId into otGroup
                         from ot in otGroup.DefaultIfEmpty()
-                        where oh.OrderDate == deliveryDto.SaleDate 
+                        where oh.OrderDate == deliveryDto.SaleDate
                               && oh.OrderTypeId == 3 // เฉพาะเดลิเวอรี่
                         orderby oh.OrderTime descending
                         select new
@@ -609,7 +652,7 @@ public class OrdersService : IOrdersService
                     OrderRemark = oh.OrderRemark ?? string.Empty,
                     ItemQTY = oh.ItemQTY,
 
-                    OrderDetails = details.Select(od => 
+                    OrderDetails = details.Select(od =>
                     {
                         // คำนวณ GrabPrice รวมของเมนูหลักและ toppings
                         var menuGrabPrice = od.Menu?.GrabPrice ?? 0;
@@ -624,10 +667,10 @@ public class OrdersService : IOrdersService
                             MenuName = od.Menu?.Name ?? "ไม่ทราบชื่อเมนู",
                             Quantity = od.Quantity,
                             Price = od.Price,
-                            
+
                             // GrabPrice รวม = เมนูหลัก + ท็อปปิ้งทั้งหมด (ต่อ 1 ชิ้น)
                             GrabPrice = totalGrabPricePerItem,
-                            
+
                             ToppingQTY = od.ToppingQTY,
                             MenuIdInFirestore = od.MenuIdInFirestore,
                             IsDone = od.IsDone,
@@ -666,6 +709,134 @@ public class OrdersService : IOrdersService
         {
             _logger.LogError(ex, $"❌ Error getting delivery orders for date {deliveryDto.SaleDate}");
             throw new InvalidOperationException($"ไม่สามารถดึงข้อมูลคำสั่งซื้อสำหรับวันที่ {deliveryDto.SaleDate} ได้", ex);
+        }
+    }
+    public async Task<List<IncomeOrdersDTO>> GetIncomeOrdersByDate(IncomeDto incomeDto)
+    {
+        if (incomeDto.SaleDate == DateOnly.MinValue)
+        {
+            return new List<IncomeOrdersDTO>();
+        }
+
+        try
+        {
+            // ใช้ SQL Query ที่ optimize แล้ว
+            var query = from oh in _context.OrderHeaders
+                        join ot in _context.Ordertypes on oh.OrderTypeId equals ot.OrderTypeId into otGroup
+                        from ot in otGroup.DefaultIfEmpty()
+                        where oh.OrderDate == incomeDto.SaleDate
+                              && oh.OrderTypeId != 3 // เฉพาะหน้าร้าน
+                        orderby oh.OrderTime descending
+                        select new
+                        {
+                            OrderHeader = oh,
+                            OrderTypeName = ot != null ? ot.OrderTypeName : "ไม่ระบุ"
+                        };
+
+            var orderData = await query.ToListAsync();
+
+            // ดึง OrderDetails แยกเพื่อ performance
+            var orderIds = orderData.Select(x => x.OrderHeader.OrderId).ToList();
+
+            var orderDetails = await _context.OrderDetails
+                .Include(od => od.Menu)
+                .Include(od => od.Toppings)
+                    .ThenInclude(t => t.Menu)
+                .Where(od => orderIds.Contains(od.OrderId))
+                .ToListAsync();
+
+            // Group OrderDetails by OrderId
+            var detailsLookup = orderDetails.GroupBy(od => od.OrderId)
+                                          .ToDictionary(g => g.Key, g => g.ToList());
+
+            // สร้าง DTO
+            var incomeOrders = orderData.Select(item =>
+            {
+                var oh = item.OrderHeader;
+                var details = detailsLookup.GetValueOrDefault(oh.OrderId, new List<OrderDetail>());
+
+                // คำนวณ TotalGrabPrice
+                var totalGrabPrice = details.Sum(od =>
+                {
+                    var mainGrabPrice = (od.Menu?.GrabPrice ?? 0) * od.Quantity;
+                    var toppingsGrabPrice = (od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0) * od.Quantity;
+                    return mainGrabPrice + toppingsGrabPrice;
+                });
+
+                var result = new IncomeOrdersDTO
+                {
+                    OrderId = oh.OrderId,
+                    CustomerName = oh.CustomerName ?? "ไม่ระบุชื่อ",
+                    OrderDate = oh.OrderDate,
+                    OrderTime = oh.OrderTime,
+                    OrderTypeId = oh.OrderTypeId,
+                    OrderTypeName = item.OrderTypeName,
+                    DischargeTime = oh.DischargeTime,
+                    IsDischarge = oh.IsDischarge,
+                    FinishOrderTime = oh.FinishOrderTime,
+                    IsFinishOrder = oh.IsFinishOrder,
+                    TotalPrice = oh.TotalPrice,
+                    TotalGrabPrice = totalGrabPrice,
+                    OrderRemark = oh.OrderRemark ?? string.Empty,
+                    ItemQTY = oh.ItemQTY,
+
+                    OrderDetails = details.Select(od =>
+                    {
+                        // คำนวณ GrabPrice รวมของเมนูหลักและ toppings
+                        var menuGrabPrice = od.Menu?.GrabPrice ?? 0;
+                        var toppingsGrabPrice = od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0;
+                        var totalGrabPricePerItem = menuGrabPrice + toppingsGrabPrice;
+
+                        return new OrderDetailDTO
+                        {
+                            OrderDetailId = od.OrderDetailId,
+                            OrderId = od.OrderId,
+                            MenuId = od.MenuId,
+                            MenuName = od.Menu?.Name ?? "ไม่ทราบชื่อเมนู",
+                            Quantity = od.Quantity,
+                            Price = od.Price,
+
+                            // GrabPrice รวม = เมนูหลัก + ท็อปปิ้งทั้งหมด (ต่อ 1 ชิ้น)
+                            GrabPrice = totalGrabPricePerItem,
+
+                            ToppingQTY = od.ToppingQTY,
+                            MenuIdInFirestore = od.MenuIdInFirestore,
+                            IsDone = od.IsDone,
+                            IsDischarge = od.IsDischarge,
+                            Remark = od.Remark,
+
+                            Toppings = od.Toppings?.Select(t => new OrderDetailToppingDTO
+                            {
+                                OrderDetailToppingId = t.OrderDetailToppingId,
+                                OrderDetailId = t.OrderDetailId,
+                                MenuId = t.MenuId,
+                                toppingNames = t.Menu?.Name ?? "ไม่ทราบชื่อท็อปปิ้ง",
+                                ToppingPrice = t.ToppingPrice,
+                                TotalGrabPrice = t.Menu?.GrabPrice ?? 0
+                            }).ToList() ?? new List<OrderDetailToppingDTO>()
+                        };
+                    }).ToList()
+                };
+
+
+                return result;
+            }).ToList();
+
+            _logger.LogInformation($"📋 Retrieved {incomeOrders.Count} delivery orders for {incomeDto.SaleDate}");
+
+            // Log สรุปยอดขาย
+            var totalOrders = incomeOrders.Count;
+            // var totalRevenue = incomeOrders.Sum(x => x.TotalSales);
+            // var totalGrabRevenue = incomeOrders.Sum(x => x.GPAmount);
+
+            // _logger.LogInformation($"💰 Summary for {incomeDto.SaleDate}: {totalOrders} orders, Revenue: ฿{totalRevenue:N2}, Grab Revenue: ฿{totalGrabRevenue:N2}");
+
+            return incomeOrders;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"❌ Error getting delivery orders for date {incomeDto.SaleDate}");
+            throw new InvalidOperationException($"ไม่สามารถดึงข้อมูลคำสั่งซื้อสำหรับวันที่ {incomeDto.SaleDate} ได้", ex);
         }
     }
     // ...existing code...
