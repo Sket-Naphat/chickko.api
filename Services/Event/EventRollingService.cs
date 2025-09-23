@@ -177,6 +177,7 @@ namespace chickko.api.Services.Event
                 CostPrice = r.CostPrice,
                 CreatedDate = r.CreatedDate,
                 CreatedTime = r.CreatedTime,
+                CustomerName = r.CustomerName,
                 Reward = r.Reward != null ? new RollingRewardDto
                 {
                     RollingRewardId = r.Reward.RollingRewardId,
