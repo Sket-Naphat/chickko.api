@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using chickko.api.Models;
 using static OrdersService;
+using chickko.api.Dtos.Event;
 
 namespace chickko.api.Data
 {
@@ -38,6 +39,11 @@ namespace chickko.api.Data
         public DbSet<StockUnitCostHistory> StockUnitCostHistory { get; set; } = null!;
         public DbSet<Delivery> Deliveries { get; set; } = null!;
         public DbSet<LoginLog> LoginLogs { get; set; } = null!;
+
+        // event models
+        public DbSet<EventRollingReward> EventRollingRewards { get; set; } = null!;
+        public DbSet<EventRollingResult> EventRollingResults { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
