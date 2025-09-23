@@ -31,6 +31,7 @@ builder.Services.AddScoped<IUtilService, UtilService>(); // เพิ่ม IUti
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<ICostService, CostService>();
 builder.Services.AddScoped<IWorktimeService, WorktimeService>();
+builder.Services.AddScoped<IEventRollingService, chickko.api.Services.Event.EventRollingService>();
 
 
 
