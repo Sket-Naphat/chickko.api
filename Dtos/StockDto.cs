@@ -69,12 +69,14 @@ namespace chickko.api.Dtos
         public int? CostId { get; set; }
         public bool IsStockIn { get; set; } = false; // ใช้เพื่อบอกว่าการซื้อเข้าเป็นการซื้อจริงหรือไม่
         public int? UpdateBy { get; set; } = 0; // ID ของผู้ที่แก้ไขต้นทุน
+        public int? RequiredQTY { get; set; } = null; 
     }
     public class GetStockCountLogByCostId
     {
         public double CostPrice { get; set; } = 0;
         public string StockInDate { get; set; } = DateTime.Now.ToString("yyyy-MM-dd");
         public List<StockCountDto> StockCountDtos { get; set; } = new List<StockCountDto>();
+        public List<StockCountDto> StockNotCountDtos { get; set; } = new List<StockCountDto>();
     }
 
     public class UpdateStockInCostDto
@@ -82,5 +84,11 @@ namespace chickko.api.Dtos
         public UpdateStockCostDto UpdateStockCostDto { get; set; } = null!;
         public List<StockInDto> StockInDto { get; set; } = null!;
     }
-
+    public class UpdateStockCountDto
+    {
+        public List<StockCountDto> StockCountDto { get; set; } = null!;
+        public DateOnly StockCountDate { get; set; }
+        public int CostID { get; set; }
+        public int UpdateBy { get; set; }
+    }
 }

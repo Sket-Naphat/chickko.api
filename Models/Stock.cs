@@ -38,7 +38,7 @@ namespace chickko.api.Models
         public TimeOnly? StockCountTime { get; set; } //เวลานับสต็อก
         public DateOnly? StockInDate { get; set; } //วันที่ซื้อเข้า
         public TimeOnly? StockInTime { get; set; } //เวลาซื้อเข้า
-        public int? RequiredQTY { get; set; } = 0!;// จำนวนที่ต้องการ
+        public int? RequiredQTY { get; set; } = 0;// จำนวนที่ต้องการ
         public int? TotalQTY { get; set; } = 0;// จำนวนคงเหลือ
         public int? StockInQTY { get; set; } = 0;//จำนวนที่ต้องซื้อเพิ่ม
         public int? PurchaseQTY { get; set; } = 0; //จำนวนที่ซื้อจริง

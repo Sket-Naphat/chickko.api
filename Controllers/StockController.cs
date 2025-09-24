@@ -120,23 +120,20 @@ namespace chickko.api.controller
             });
         }
         [HttpPost("UpdateStockCount")]
-        public async Task<IActionResult> UpdateStockCount([FromBody] List<StockCountDto> stockCountDto)
+        public async Task<IActionResult> UpdateStockCount(UpdateStockCountDto updateStockCountDto)
         {
             try
             {
-                var firstStock = stockCountDto.FirstOrDefault();
-                if (firstStock != null)
+                var costDate = updateStockCountDto.StockCountDate;
+                var costId = updateStockCountDto.CostID;
+                var updateBy = updateStockCountDto.UpdateBy;
+                //update cost
+                if (costId != 0)
                 {
-                    // ใช้วันที่วันนี้, CostId และ UpdateBy จากรายการแรก
-                    var costDate = DateOnly.TryParseExact(firstStock.StockCountDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
-                    var costId = firstStock.CostId ?? 0;
-                    var updateBy = firstStock.UpdateBy ?? 0;
-                    if (costId != 0)
-                    {
-                        await _costService.UpdateStockCostDate(costDate, costId, updateBy);
-                    }
+                    await _costService.UpdateStockCostDate(costDate, costId, updateBy);
                 }
-                await _stockService.UpdateStockCountLog(stockCountDto);
+
+                await _stockService.UpdateStockCountLog(updateStockCountDto.StockCountDto, updateStockCountDto.CostID);
                 return Ok(new
                 {
                     success = true,
@@ -163,7 +160,7 @@ namespace chickko.api.controller
                 {
                     stock.IsPurchase = IsPurchase;
                     stock.UpdateBy = UpdateBy;
-                    await _stockService.CreateStockIn(stock);
+                    await _stockService.CreateStockIn(stock , updateStockInCostDto.UpdateStockCostDto.CostID);
                     successList.Add(stock.StockId);
                 }
                 catch (Exception ex)

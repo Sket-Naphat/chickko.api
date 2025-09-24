@@ -38,20 +38,25 @@ namespace chickko.api.Services.Event
                 existingResult.CustomerName = resultDto.CustomerName;
                 existingResult.RewardID = resultDto.RewardID;
                 existingResult.OrderFirstStoreID = resultDto.OrderFirstStoreID;
-                existingResult.CreatedDate = DateOnly.FromDateTime(DateTime.Now);
-                existingResult.CreatedTime = TimeOnly.FromDateTime(DateTime.Now);
+                var thaiTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var thaiNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, thaiTimeZone);
+                existingResult.CreatedDate = DateOnly.FromDateTime(thaiNow);
+                existingResult.CreatedTime = TimeOnly.FromDateTime(thaiNow);
                 // Update other properties as needed
             }
             else
             {
+                var thaiTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+                var thaiNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, thaiTimeZone);
+
                 var result = new EventRollingResult
                 {
                     CustomerName = resultDto.CustomerName,
                     OrderFirstStoreID = resultDto.OrderFirstStoreID,
                     RewardID = resultDto.RewardID,
                     CostPrice = resultDto.CostPrice,
-                    CreatedDate = DateOnly.FromDateTime(DateTime.Now),
-                    CreatedTime = TimeOnly.FromDateTime(DateTime.Now)
+                    CreatedDate = DateOnly.FromDateTime(thaiNow),
+                    CreatedTime = TimeOnly.FromDateTime(thaiNow)
                     // Map other properties as needed
                 };
 
