@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Text.Json;
 using chickko.api.Data;
+using chickko.api.Dtos;
 using chickko.api.Interface;
 using chickko.api.Models;
 using chickko.api.Services;
@@ -438,24 +439,51 @@ public class OrdersService : IOrdersService
                 Console.WriteLine($"❌ Inner: {ex.InnerException.Message}");
         }
     }
-    public async Task<List<DailySaleDto>> GetDailyDineInSalesReport(DateOnly date)
+    public async Task<List<DailySaleDto>> GetDailyDineInSalesReport(SaleDateDto saleDateDto)
     {
         try
         {
-            var dailySales = await _context.OrderHeaders
-            .Where(oh => oh.OrderTypeId != 3)   // กรองยอดขายหน้าร้าน
-                                                //.Where(oh => oh.IsFinishOrder == true) // ถ้าต้องการเฉพาะที่ปิดบิลแล้ว
-            .GroupBy(oh => oh.OrderDate)
-            .Select(g => new DailySaleDto
+            // ✅ สร้าง query เพื่อกรองยอดขายหน้าร้าน
+            var query = _context.OrderHeaders
+                .Where(oh => oh.OrderTypeId != 3);   // กรองยอดขายหน้าร้าน (ไม่ใช่เดลิเวอรี่)
+                //.Where(oh => oh.IsFinishOrder == true); // ถ้าต้องการเฉพาะที่ปิดบิลแล้ว
+
+            // ✅ แก้ไขการกรองปี/เดือน - ใช้ .Year/.Month property ของ DateOnly
+            if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
             {
-                SaleDate = g.Key ?? DateOnly.MinValue,
-                Orders = g.Count(),
-                TotalAmount = g.Sum(x => (decimal?)x.TotalPrice) ?? 0,
-                AvgPerOrder = Math.Round(
-                                  (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2)
-            })
-            .OrderByDescending(x => x.SaleDate)
-            .ToListAsync();
+                query = query.Where(c => c.OrderDate.HasValue &&
+                    c.OrderDate.Value.Year == saleDateDto.Year.Value &&
+                    c.OrderDate.Value.Month == saleDateDto.Month.Value);
+            }
+            else if (saleDateDto.Year.HasValue)
+            {
+                query = query.Where(c => c.OrderDate.HasValue &&
+                    c.OrderDate.Value.Year == saleDateDto.Year.Value);
+            }
+            else if (saleDateDto.Month.HasValue)
+            {
+                query = query.Where(c => c.OrderDate.HasValue &&
+                    c.OrderDate.Value.Month == saleDateDto.Month.Value);
+            }
+
+            // ✅ แก้ไข: ลบการกำหนด dailySales ซ้ำ และแก้ไข syntax error
+            var dailySales = await query
+                .GroupBy(oh => oh.OrderDate)
+                .Select(g => new DailySaleDto
+                {
+                    SaleDate = g.Key ?? DateOnly.MinValue,
+                    Orders = g.Count(),
+                    TotalAmount = g.Sum(x => (decimal?)x.TotalPrice) ?? 0,
+                    AvgPerOrder = Math.Round(
+                        (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2)
+                })
+                .OrderByDescending(x => x.SaleDate)
+                .ToListAsync();
+
+            // ✅ เพิ่ม logging สำหรับ debug
+            _logger.LogInformation($"📊 GetDailyDineInSalesReport: Found {dailySales.Count} records" +
+                $" | Year: {saleDateDto.Year}" +
+                $" | Month: {saleDateDto.Month}");
 
             return dailySales;
         }
@@ -470,21 +498,47 @@ public class OrdersService : IOrdersService
         }
 
     }
-    public async Task<List<DailySaleDto>> GetDailyDeliverySalesReport(DateOnly date)
+    public async Task<List<DailySaleDto>> GetDailyDeliverySalesReport(SaleDateDto saleDateDto)
     {
         try
         {
-            var dailySales = await _context.Deliveries
-           .GroupBy(oh => oh.SaleDate)
-           .Select(g => new DailySaleDto
-           {
-               SaleDate = g.Key,
-               Orders = g.Count(),
-               TotalAmount = g.Sum(x => (decimal?)x.NetSales) ?? 0,
-               AvgPerOrder = 0
-           })
-           .OrderByDescending(x => x.SaleDate)
-           .ToListAsync();
+            // ✅ สร้าง query เพื่อกรองยอดขายเดลิเวอรี่
+            var query = _context.Deliveries.AsQueryable();
+
+            // ✅ เพิ่มการกรองปี/เดือน - ใช้ .Year/.Month property ของ DateOnly
+            if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
+            {
+                query = query.Where(d => d.SaleDate.Year == saleDateDto.Year.Value &&
+                                   d.SaleDate.Month == saleDateDto.Month.Value);
+            }
+            else if (saleDateDto.Year.HasValue)
+            {
+                query = query.Where(d => d.SaleDate.Year == saleDateDto.Year.Value);
+            }
+            else if (saleDateDto.Month.HasValue)
+            {
+                query = query.Where(d => d.SaleDate.Month == saleDateDto.Month.Value);
+            }
+
+            // ✅ Execute query with grouping
+            var dailySales = await query
+                .GroupBy(d => d.SaleDate)
+                .Select(g => new DailySaleDto
+                {
+                    SaleDate = g.Key,
+                    Orders = g.Count(),
+                    TotalAmount = g.Sum(x => (decimal?)x.NetSales) ?? 0,
+                    AvgPerOrder = g.Count() > 0 
+                        ? Math.Round((double)((g.Sum(x => (decimal?)x.NetSales) ?? 0) / g.Count()), 2)
+                        : 0 // ✅ คำนวณค่าเฉลี่ยต่อออร์เดอร์
+                })
+                .OrderByDescending(x => x.SaleDate)
+                .ToListAsync();
+
+            // ✅ เพิ่ม logging สำหรับ debug
+            _logger.LogInformation($"📊 GetDailyDeliverySalesReport: Found {dailySales.Count} records" +
+                $" | Year: {saleDateDto.Year}" +
+                $" | Month: {saleDateDto.Month}");
 
             return dailySales;
         }

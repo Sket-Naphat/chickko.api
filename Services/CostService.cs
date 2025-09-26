@@ -443,24 +443,38 @@ namespace chickko.api.Services
             }
         }
 
-        public async Task<List<CostDto>> GetAllCostList(CostDto costDto)
+        public async Task<List<CostDto>> GetAllCostList(GetCostListDto getCostListDto)
         {
             try
             {
                 var query = _context.Cost.AsQueryable()
                 .Include(c => c.CostCategory)
                 .Include(c => c.CostStatus)
-                .Where(c => c.IsPurchase == costDto.IsPurchase);
+                .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
 
                 //กรองหมวดหมู่ค่าใช้จ่าย
-                if (costDto.CostCategoryID > 0)
+                if (getCostListDto.CostCategoryID > 0)
                 {
-                    query = query.Where(c => c.CostCategoryID == costDto.CostCategoryID);
+                    query = query.Where(c => c.CostCategoryID == getCostListDto.CostCategoryID);
                 }
-                //กรองวันที่ค่าใช้จ่าย
-                if (costDto.CostDate.HasValue)
+
+
+                // Filter by Year and Month if provided
+                if (getCostListDto.Year.HasValue && getCostListDto.Month.HasValue)
                 {
-                    query = query.Where(c => c.CostDate == costDto.CostDate.Value);
+                    query = query.Where(c => c.CostDate.HasValue &&
+                        c.CostDate.Value.Year == getCostListDto.Year.Value &&
+                        c.CostDate.Value.Month == getCostListDto.Month.Value);
+                }
+                else if (getCostListDto.Year.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue &&
+                        c.CostDate.Value.Year == getCostListDto.Year.Value);
+                }
+                else if (getCostListDto.Month.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue &&
+                        c.CostDate.Value.Month == getCostListDto.Month.Value);
                 }
 
                 var costs = await query.OrderByDescending(c => c.CostDate).ThenByDescending(c => c.CostTime).ToListAsync();
@@ -553,6 +567,88 @@ namespace chickko.api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "เกิดข้อผิดพลาดในการลบค่าใช้จ่ายที่มี ID: {CostId}", costId);
+                throw;
+            }
+        }
+        public async Task<List<DailyCostReportDto>> GetCostListReport(GetCostListDto getCostListDto)
+        {
+            try
+            {
+                var query = _context.Cost.AsQueryable()
+                    .Include(c => c.CostCategory)
+                    .Include(c => c.CostStatus)
+                    .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
+
+                // กรองหมวดหมู่ค่าใช้จ่าย
+                if (getCostListDto.CostCategoryID > 0)
+                {
+                    query = query.Where(c => c.CostCategoryID == getCostListDto.CostCategoryID);
+                }
+
+                // Filter by Year and Month if provided
+                if (getCostListDto.Year.HasValue && getCostListDto.Month.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue &&
+                        c.CostDate.Value.Year == getCostListDto.Year.Value &&
+                        c.CostDate.Value.Month == getCostListDto.Month.Value);
+                }
+                else if (getCostListDto.Year.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue &&
+                        c.CostDate.Value.Year == getCostListDto.Year.Value);
+                }
+                else if (getCostListDto.Month.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue &&
+                        c.CostDate.Value.Month == getCostListDto.Month.Value);
+                }
+
+                // ✅ รวมข้อมูลตามวันที่และหมวดหมู่
+                var groupedCosts = await query
+                    .GroupBy(c => new { 
+                        Date = c.CostDate, 
+                        CategoryId = c.CostCategoryID,
+                        CategoryName = c.CostCategory!.CostCategoryName 
+                    })
+                    .Select(g => new
+                    {
+                        Date = g.Key.Date,
+                        CategoryId = g.Key.CategoryId,
+                        CategoryName = g.Key.CategoryName,
+                        TotalAmount = g.Sum(x => x.CostPrice),
+                        Count = g.Count()
+                    })
+                    .ToListAsync();
+
+                // ✅ จัดกลุ่มตามวันที่เพื่อสร้าง DailyCostReportDto
+                var dailyReports = groupedCosts
+                    .GroupBy(x => x.Date)
+                    .Select(dateGroup => new DailyCostReportDto
+                    {
+                        CostDate = dateGroup.Key,
+                        TotalAmount = (decimal)dateGroup.Sum(x => x.TotalAmount), // ยอดรวมทั้งหมดของวันนั้น
+                        CategoryDetails = dateGroup.Select(cat => new CostCategoryDetailDto
+                        {
+                            CostCategoryID = cat.CategoryId,
+                            CategoryName = cat.CategoryName ?? "ไม่ระบุ",
+                            TotalAmount = (decimal)cat.TotalAmount,
+                            Count = cat.Count
+                        }).ToList()
+                    })
+                    .OrderByDescending(x => x.CostDate)
+                    .ToList();
+
+                // ✅ เพิ่ม logging สำหรับ debug
+                _logger.LogInformation($"📊 GetCostListReport: Found {dailyReports.Count} daily records" +
+                    $" | Year: {getCostListDto.Year}" +
+                    $" | Month: {getCostListDto.Month}" +
+                    $" | CategoryID: {getCostListDto.CostCategoryID}");
+
+                return dailyReports;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการดึงรายงานค่าใช้จ่ายรายวัน");
                 throw;
             }
         }

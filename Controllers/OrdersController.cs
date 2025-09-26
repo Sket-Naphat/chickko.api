@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using chickko.api.Interface;
 using chickko.api.Models;
 using Microsoft.AspNetCore.Authorization;
+using chickko.api.Dtos;
 
 namespace chickko.api.Controllers
 {
@@ -40,20 +41,20 @@ namespace chickko.api.Controllers
                 message = result
             });
         }
-        [HttpGet("GetDailyDineInSalesReport")]
-        public async Task<IActionResult> GetDailyDineInSalesReport(DateOnly date)
+        [HttpPost("GetDailyDineInSalesReport")]
+        public async Task<IActionResult> GetDailyDineInSalesReport(SaleDateDto saleDateDto)
         {
-            var result = await _ordersService.GetDailyDineInSalesReport(date);
+            var result = await _ordersService.GetDailyDineInSalesReport(saleDateDto);
             return Ok(new
             {
                 success = true,
                 data = result
             });
         }
-        [HttpGet("GetDailyDeliverySalesReport")]
-        public async Task<IActionResult> GetDailyDeliverySalesReport(DateOnly date)
+        [HttpPost("GetDailyDeliverySalesReport")]
+        public async Task<IActionResult> GetDailyDeliverySalesReport(SaleDateDto saleDateDto)
         {
-            var result = await _ordersService.GetDailyDeliverySalesReport(date);
+            var result = await _ordersService.GetDailyDeliverySalesReport(saleDateDto);
             return Ok(new
             {
                 success = true,
