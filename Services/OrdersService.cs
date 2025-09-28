@@ -445,6 +445,8 @@ public class OrdersService : IOrdersService
         {
             // ✅ สร้าง query เพื่อกรองยอดขายหน้าร้าน
             var query = _context.OrderHeaders
+                .Include(oh => oh.OrderType)
+                .Include(oh => oh.DischargeType)
                 .Where(oh => oh.OrderTypeId != 3);   // กรองยอดขายหน้าร้าน (ไม่ใช่เดลิเวอรี่)
                 //.Where(oh => oh.IsFinishOrder == true); // ถ้าต้องการเฉพาะที่ปิดบิลแล้ว
 
@@ -466,7 +468,31 @@ public class OrdersService : IOrdersService
                     c.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
 
-            // ✅ แก้ไข: ลบการกำหนด dailySales ซ้ำ และแก้ไข syntax error
+            // ✅ Query ครั้งเดียวเพื่อหา daily sales และ menu details พร้อมกัน
+            var orderDetailsQuery = _context.OrderDetails
+                .Include(od => od.Menu)
+                .Include(od => od.OrderHeader)
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3); // กรองยอดขายหน้าร้าน
+
+            // Apply same filtering as main query
+            if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
+            {
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
+                    od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value &&
+                    od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
+            }
+            else if (saleDateDto.Year.HasValue)
+            {
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
+                    od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value);
+            }
+            else if (saleDateDto.Month.HasValue)
+            {
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
+                    od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
+            }
+
+            // ✅ ดึงข้อมูล daily sales
             var dailySales = await query
                 .GroupBy(oh => oh.OrderDate)
                 .Select(g => new DailySaleDto
@@ -475,10 +501,47 @@ public class OrdersService : IOrdersService
                     Orders = g.Count(),
                     TotalAmount = g.Sum(x => (decimal?)x.TotalPrice) ?? 0,
                     AvgPerOrder = Math.Round(
-                        (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2)
+                        (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2),
+                    TopSellingItems = new List<SoldMenuDto>() // Initialize empty list
                 })
                 .OrderByDescending(x => x.SaleDate)
                 .ToListAsync();
+
+            // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory
+            var allOrderDetails = await orderDetailsQuery.ToListAsync();
+            
+            // Group by date and menu, then calculate top selling items for each date
+            var dailyMenuSales = allOrderDetails
+                .Where(od => od.OrderHeader.OrderDate.HasValue)
+                .GroupBy(od => od.OrderHeader.OrderDate!.Value)
+                .ToDictionary(dateGroup => dateGroup.Key, dateGroup => 
+                    dateGroup
+                        .GroupBy(od => new { od.MenuId, MenuName = od.Menu?.Name ?? "Unknown" })
+                        .Select(menuGroup => new SoldMenuDto
+                        {
+                            MenuId = menuGroup.Key.MenuId,
+                            MenuName = menuGroup.Key.MenuName,
+                            QuantitySold = menuGroup.Sum(od => od.Quantity),
+                            TotalSales = menuGroup.Sum(od => od.Price * od.Quantity),
+                            TotalCost = menuGroup.Sum(od => (od.Menu?.Cost ?? 0) * od.Quantity),
+                            TotalProfit = menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity),
+                            ProfitMargin = menuGroup.Sum(od => od.Price * od.Quantity) > 0 ? 
+                                (double)(menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity) / 
+                                menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
+                        })
+                        .OrderByDescending(x => x.QuantitySold)
+                        .Take(5)
+                        .ToList()
+                );
+
+            // ✅ Assign top selling items to each daily sale
+            foreach (var dailySale in dailySales)
+            {
+                if (dailySale.SaleDate != null && dailyMenuSales.TryGetValue(dailySale.SaleDate.Value, out var topItems))
+                {
+                    dailySale.TopSellingItems = topItems;
+                }
+            }
 
             // ✅ เพิ่ม logging สำหรับ debug
             _logger.LogInformation($"📊 GetDailyDineInSalesReport: Found {dailySales.Count} records" +

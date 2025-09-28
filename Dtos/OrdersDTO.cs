@@ -1,14 +1,16 @@
 public class DailySaleDto
 {
-    public DateOnly SaleDate { get; set; }   // วันที่ขาย
-    public int Orders { get; set; }          // จำนวนบิล
-    public decimal TotalAmount { get; set; } // ยอดขายรวม
-    public double AvgPerOrder { get; set; }  // ค่าเฉลี่ยต่อบิล
+    public DateOnly? SaleDate { get; set; } = null;  // วันที่ขาย
+    public int? Orders { get; set; } = null;         // จำนวนบิล
+    public decimal? TotalAmount { get; set; } = null; // ยอดขายรวม
+    public double? AvgPerOrder { get; set; } = null;  // ค่าเฉลี่ยต่อบิล
+    public List<SoldMenuDto> TopSellingItems { get; set; } = new(); // รายการขายดี 5 อันดับ
+    public int? totalOrders { get; set; } = null; // For total orders in the month
 }
 public class IncomeDto
 {
     public int DeliveryId { get; set; }
-    public DateOnly SaleDate { get; set; } // 1. วันที่ขาย
+    public DateOnly? SaleDate { get; set; } // 1. วันที่ขาย
     public decimal TotalSales { get; set; } // 2. ยอดขายรวม
     public decimal NetSales { get; set; } // 3. ยอดขายสุทธิหลังหัก GP
     public decimal GPPercent { get; set; } // 4. จำนวน GP ที่หักไปเป็น %
@@ -39,4 +41,15 @@ public class IncomeOrdersDTO
     //list of order details
     public List<OrderDetailDTO> OrderDetails { get; set; } = new();
 
+}
+//รายการเมนูที่ขายได้
+public class SoldMenuDto
+{
+    public int? MenuId { get; set; } = null;
+    public string? MenuName { get; set; } = string.Empty;
+    public int? QuantitySold { get; set; } = 0;
+    public decimal? TotalSales { get; set; } = 0;
+    public decimal? TotalCost { get; set; } = 0;
+    public decimal? TotalProfit { get; set; } = 0;
+    public double? ProfitMargin { get; set; } = 0;
 }
