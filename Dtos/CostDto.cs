@@ -58,6 +58,11 @@ namespace chickko.api.Dtos
     {
         public DateOnly? CostDate { get; set; }
         public decimal TotalAmount { get; set; } // ยอดรวมทั้งหมดของวันนั้น
+        public decimal TotalRawMaterialCost { get; set; } // ยอดรวมต้นทุนวัตถุดิบ
+        public decimal TotalStaffCost { get; set; } // ยอดรวมต้นทุนพนักงาน
+        public decimal TotalOwnerCost { get; set; } // ยอดรวมต้นทุนเจ้าของ
+        public decimal TotalUtilityCost { get; set; } // ยอดรวมต้นทุนค่าสาธารณูปโภค
+        public decimal TotalOtherCost { get; set; } // ยอดรวมต้นทุนอื่นๆ
         public List<CostCategoryDetailDto> CategoryDetails { get; set; } = new List<CostCategoryDetailDto>();
         
         // Additional properties

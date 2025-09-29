@@ -502,7 +502,8 @@ public class OrdersService : IOrdersService
                     TotalAmount = g.Sum(x => (decimal?)x.TotalPrice) ?? 0,
                     AvgPerOrder = Math.Round(
                         (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2),
-                    TopSellingItems = new List<SoldMenuDto>() // Initialize empty list
+                    TopSellingItems = new List<SoldMenuDto>(), // Initialize empty list
+                    totalOrders = g.Count()
                 })
                 .OrderByDescending(x => x.SaleDate)
                 .ToListAsync();

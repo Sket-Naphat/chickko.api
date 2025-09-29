@@ -605,10 +605,11 @@ namespace chickko.api.Services
 
                 // ✅ รวมข้อมูลตามวันที่และหมวดหมู่
                 var groupedCosts = await query
-                    .GroupBy(c => new { 
-                        Date = c.CostDate, 
+                    .GroupBy(c => new
+                    {
+                        Date = c.CostDate,
                         CategoryId = c.CostCategoryID,
-                        CategoryName = c.CostCategory!.CostCategoryName 
+                        CategoryName = c.CostCategory!.CostCategoryName
                     })
                     .Select(g => new
                     {
@@ -620,13 +621,35 @@ namespace chickko.api.Services
                     })
                     .ToListAsync();
 
-                // ✅ จัดกลุ่มตามวันที่เพื่อสร้าง DailyCostReportDto
+                // ✅ จัดกลุ่มตามวันที่เพื่อสร้าง DailyCostReportDto พร้อมแยกต้นทุนตามหมวดหมู่
                 var dailyReports = groupedCosts
                     .GroupBy(x => x.Date)
                     .Select(dateGroup => new DailyCostReportDto
                     {
                         CostDate = dateGroup.Key,
                         TotalAmount = (decimal)dateGroup.Sum(x => x.TotalAmount), // ยอดรวมทั้งหมดของวันนั้น
+
+                        // ✅ แยกต้นทุนตามหมวดหมู่
+                        TotalRawMaterialCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 1) // วัตถุดิบ
+                            .Sum(x => x.TotalAmount),
+
+                        TotalStaffCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 2) // ค่าจ้างพนักงาน
+                            .Sum(x => x.TotalAmount),
+
+                        TotalOwnerCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 5) // ค่าใช้จ่ายเจ้าของ
+                            .Sum(x => x.TotalAmount),
+
+                        TotalUtilityCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 4) // ค่าสาธารณูปโภค
+                            .Sum(x => x.TotalAmount),
+
+                        TotalOtherCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId != 1 && x.CategoryId != 2 && x.CategoryId != 4 && x.CategoryId != 5) // อื่นๆ
+                            .Sum(x => x.TotalAmount),
+
                         CategoryDetails = dateGroup.Select(cat => new CostCategoryDetailDto
                         {
                             CostCategoryID = cat.CategoryId,
