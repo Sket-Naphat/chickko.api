@@ -579,6 +579,10 @@ namespace chickko.api.Services
                     .Include(c => c.CostStatus)
                     .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
 
+                // ✅ ดึงข้อมูล Worktime สำหรับคำนวณค่าแรงพนักงาน
+                var worktimeQuery = _context.Worktime
+                    .Where(w => w.IsPurchase == getCostListDto.IsPurchase);
+
                 // กรองหมวดหมู่ค่าใช้จ่าย
                 if (getCostListDto.CostCategoryID > 0)
                 {
@@ -591,17 +595,37 @@ namespace chickko.api.Services
                     query = query.Where(c => c.CostDate.HasValue &&
                         c.CostDate.Value.Year == getCostListDto.Year.Value &&
                         c.CostDate.Value.Month == getCostListDto.Month.Value);
+
+                    worktimeQuery = worktimeQuery.Where(w =>
+                    w.WorkDate.Year == getCostListDto.Year.Value &&
+                    w.WorkDate.Month == getCostListDto.Month.Value);
                 }
                 else if (getCostListDto.Year.HasValue)
                 {
                     query = query.Where(c => c.CostDate.HasValue &&
                         c.CostDate.Value.Year == getCostListDto.Year.Value);
+
+                    worktimeQuery = worktimeQuery.Where(w =>
+                   w.WorkDate.Year == getCostListDto.Year.Value);
                 }
                 else if (getCostListDto.Month.HasValue)
                 {
                     query = query.Where(c => c.CostDate.HasValue &&
                         c.CostDate.Value.Month == getCostListDto.Month.Value);
+
+                    worktimeQuery = worktimeQuery.Where(w =>
+                    w.WorkDate.Month == getCostListDto.Month.Value);
                 }
+
+                // ✅ ดึงข้อมูล Worktime และจัดกลุ่มตามวันที่
+                var dailyWorktimeCosts = await worktimeQuery
+                    .GroupBy(w => w.WorkDate)
+                    .Select(g => new
+                    {
+                        WorkDate = g.Key,
+                        TotalWageCost = g.Sum(w => w.WageCost)
+                    })
+                    .ToListAsync();
 
                 // ✅ รวมข้อมูลตามวันที่และหมวดหมู่
                 var groupedCosts = await query
@@ -624,39 +648,67 @@ namespace chickko.api.Services
                 // ✅ จัดกลุ่มตามวันที่เพื่อสร้าง DailyCostReportDto พร้อมแยกต้นทุนตามหมวดหมู่
                 var dailyReports = groupedCosts
                     .GroupBy(x => x.Date)
-                    .Select(dateGroup => new DailyCostReportDto
+                    .Select(dateGroup =>
                     {
-                        CostDate = dateGroup.Key,
-                        TotalAmount = (decimal)dateGroup.Sum(x => x.TotalAmount), // ยอดรวมทั้งหมดของวันนั้น
+                        var costDate = dateGroup.Key;
 
-                        // ✅ แยกต้นทุนตามหมวดหมู่
-                        TotalRawMaterialCost = (decimal)dateGroup
-                            .Where(x => x.CategoryId == 1) // วัตถุดิบ
-                            .Sum(x => x.TotalAmount),
+                        // ✅ คำนวณค่าแรงพนักงาน - ใช้ Worktime ก่อน แล้วค่อย fallback ไปใช้ Cost
+                        decimal totalStaffCost = 0;
 
-                        TotalStaffCost = (decimal)dateGroup
-                            .Where(x => x.CategoryId == 2) // ค่าจ้างพนักงาน
-                            .Sum(x => x.TotalAmount),
+                        // ตรวจสอบว่ามีข้อมูล Worktime สำหรับวันนี้หรือไม่
+                        var worktimeCost = dailyWorktimeCosts
+                            .FirstOrDefault(w => w.WorkDate == costDate);
 
-                        TotalOwnerCost = (decimal)dateGroup
-                            .Where(x => x.CategoryId == 5) // ค่าใช้จ่ายเจ้าของ
-                            .Sum(x => x.TotalAmount),
-
-                        TotalUtilityCost = (decimal)dateGroup
-                            .Where(x => x.CategoryId == 4) // ค่าสาธารณูปโภค
-                            .Sum(x => x.TotalAmount),
-
-                        TotalOtherCost = (decimal)dateGroup
-                            .Where(x => x.CategoryId != 1 && x.CategoryId != 2 && x.CategoryId != 4 && x.CategoryId != 5) // อื่นๆ
-                            .Sum(x => x.TotalAmount),
-
-                        CategoryDetails = dateGroup.Select(cat => new CostCategoryDetailDto
+                        if (worktimeCost != null && worktimeCost.TotalWageCost > 0)
                         {
-                            CostCategoryID = cat.CategoryId,
-                            CategoryName = cat.CategoryName ?? "ไม่ระบุ",
-                            TotalAmount = (decimal)cat.TotalAmount,
-                            Count = cat.Count
-                        }).ToList()
+                            // ✅ ใช้ค่าจาก Worktime table
+                            totalStaffCost = (decimal)worktimeCost.TotalWageCost;
+                        }
+                        else if (costDate < new DateOnly(2025, 9, 17))
+                        {
+                            // ✅ Fallback: ใช้ค่าจาก Cost table (วิธีเดิม) - เฉพาะข้อมูลก่อน 2025-09-17
+                            totalStaffCost = (decimal)dateGroup
+                                .Where(x => x.CategoryId == 2) // ค่าจ้างพนักงาน
+                                .Sum(x => x.TotalAmount);
+                        }
+                        else
+                        {
+                            // ✅ หลังวันที่ 2025-09-17 ถ้าไม่มีข้อมูลใน Worktime ให้เป็น 0
+                            totalStaffCost = 0;
+                        }
+
+                        return new DailyCostReportDto
+                        {
+                            CostDate = costDate,
+                            TotalAmount = (decimal)dateGroup.Sum(x => x.TotalAmount) + totalStaffCost, // ✅ รวมค่าแรงใหม่
+
+                            // ✅ แยกต้นทุนตามหมวดหมู่
+                            TotalRawMaterialCost = (decimal)dateGroup
+                                .Where(x => x.CategoryId == 1) // วัตถุดิบ
+                                .Sum(x => x.TotalAmount),
+
+                            TotalStaffCost = totalStaffCost, // ✅ ใช้ค่าที่คำนวณใหม่
+
+                            TotalOwnerCost = (decimal)dateGroup
+                                .Where(x => x.CategoryId == 5) // ค่าใช้จ่ายเจ้าของ
+                                .Sum(x => x.TotalAmount),
+
+                            TotalUtilityCost = (decimal)dateGroup
+                                .Where(x => x.CategoryId == 3) // ค่าสาธารณูปโภค
+                                .Sum(x => x.TotalAmount),
+
+                            TotalOtherCost = (decimal)dateGroup
+                                .Where(x => x.CategoryId != 1 && x.CategoryId != 2 && x.CategoryId != 3 && x.CategoryId != 5)
+                                .Sum(x => x.TotalAmount),
+
+                            CategoryDetails = dateGroup.Select(cat => new CostCategoryDetailDto
+                            {
+                                CostCategoryID = cat.CategoryId,
+                                CategoryName = cat.CategoryName ?? "ไม่ระบุ",
+                                TotalAmount = (decimal)cat.TotalAmount,
+                                Count = cat.Count
+                            }).ToList()
+                        };
                     })
                     .OrderByDescending(x => x.CostDate)
                     .ToList();
@@ -665,7 +717,8 @@ namespace chickko.api.Services
                 _logger.LogInformation($"📊 GetCostListReport: Found {dailyReports.Count} daily records" +
                     $" | Year: {getCostListDto.Year}" +
                     $" | Month: {getCostListDto.Month}" +
-                    $" | CategoryID: {getCostListDto.CostCategoryID}");
+                    $" | CategoryID: {getCostListDto.CostCategoryID}" +
+                    $" | Worktime records: {dailyWorktimeCosts.Count}");
 
                 return dailyReports;
             }
