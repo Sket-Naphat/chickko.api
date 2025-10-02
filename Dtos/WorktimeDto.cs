@@ -38,16 +38,13 @@ namespace chickko.api.Dtos
     }
     public class UpdateWageCostDto
     {
-        [Required]
         public int EmployeeID { get; set; }
-        public string? StartDate { get; set; }
-        public string? EndDate { get; set; }
+        public string? WorkDate { get; set; }
         public double TotalWorktime { get; set; } = 0;
         public double WageCost { get; set; } = 0!;
         public string? PurchaseDate { get; set; }
         public bool IsPurchase { get; set; } = false;
         public string Remark { get; set; } = "";
-        public List<string>? WorkDatePurchase { get; set; }
         public int? CreatedBy { get; set; }
     }
 }

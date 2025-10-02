@@ -172,7 +172,7 @@ namespace chickko.api.controller
         }
 
         [HttpPost("UpdateWageCost")]
-        public async Task<IActionResult> UpdateWageCost(UpdateWageCostDto updateWageCostDto)
+        public async Task<IActionResult> UpdateWageCost(List<UpdateWageCostDto> updateWageCostDto)
         {
             try
             {
