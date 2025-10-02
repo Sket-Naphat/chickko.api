@@ -172,11 +172,11 @@ namespace chickko.api.controller
         }
 
         [HttpPost("UpdateWageCost")]
-        public async Task<IActionResult> UpdateWageCost(WorktimeDto worktimeDto)
+        public async Task<IActionResult> UpdateWageCost(UpdateWageCostDto updateWageCostDto)
         {
             try
             {
-                await _costService.UpdateWageCost(worktimeDto);
+                await _costService.UpdateWageCost(updateWageCostDto);
                 return Ok();
             }
             catch (Exception ex)

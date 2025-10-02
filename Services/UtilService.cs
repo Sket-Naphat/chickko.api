@@ -13,6 +13,7 @@ namespace chickko.api.Services
     {
         private readonly ChickkoContext _context;
         private readonly ISiteService _siteService;
+        private static readonly TimeZoneInfo ThaiTimeZone = GetThaiTimeZone();
         public UtilService(ChickkoContext context, ISiteService siteService)
         {
             _context = context;
@@ -279,5 +280,50 @@ namespace chickko.api.Services
             await _context.SaveChangesAsync();
         }
 
+
+         #region DateTime Methods
+
+        /// <summary>
+        /// ดึง TimeZoneInfo สำหรับประเทศไทย (UTC+7)
+        /// </summary>
+        private static TimeZoneInfo GetThaiTimeZone()
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); // Windows
+            }
+            catch
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById("Asia/Bangkok"); // Linux
+                }
+                catch
+                {
+                    return TimeZoneInfo.CreateCustomTimeZone("Thai", TimeSpan.FromHours(7), "Thailand Time", "Thailand Time");
+                }
+            }
+        }
+
+        /// <summary>
+        /// ดึงเวลาปัจจุบันของประเทศไทย (UTC+7)
+        /// แทน TimeOnly.FromDateTime(DateTime.Now)
+        /// </summary>
+        public TimeOnly GetThailandTime()
+        {
+            var thaiDateTime = TimeZoneInfo.ConvertTime(DateTime.Now, ThaiTimeZone);
+            return TimeOnly.FromDateTime(thaiDateTime);
+        }
+
+        /// <summary>
+        /// ดึงวันที่ปัจจุบันของประเทศไทย (UTC+7)
+        /// </summary>
+        public DateOnly GetThailandDate()
+        {
+            var thaiDateTime = TimeZoneInfo.ConvertTime(DateTime.Now, ThaiTimeZone);
+            return DateOnly.FromDateTime(thaiDateTime);
+        }
+
+        #endregion
     }
 }

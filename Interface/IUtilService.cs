@@ -13,5 +13,8 @@ namespace chickko.api.Interface
         Task<QuerySnapshot> GetSnapshotFromFirestoreWithDateGreaterThan(string collectionName, string? orderByField = null, string? whereField = null, string? dateTo = null);
         Task<QuerySnapshot> GetSnapshotFromFirestoreWithID(string collectionName, string DocumentId);
         Task AddErrorLog(ErrorLog errorLog);
+
+        TimeOnly GetThailandTime();
+        DateOnly GetThailandDate();
     }
 }

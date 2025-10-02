@@ -12,10 +12,13 @@ namespace chickko.api.Services
     {
         private readonly ChickkoContext _context;
         private readonly ILogger<StockService> _logger;
-        public StockService(ChickkoContext context, ILogger<StockService> logger)
+        private readonly IUtilService _utilService;
+
+        public StockService(ChickkoContext context, ILogger<StockService> logger, IUtilService utilService)
         {
             _context = context;
             _logger = logger;
+            _utilService = utilService;
         }
         public async Task<List<StockUnitType>> GetStockUnitType()
         {
@@ -300,8 +303,8 @@ namespace chickko.api.Services
                 // 5. อัปเดตข้อมูลใน Stock หลักให้ตรงกับยอดคงเหลือใหม่
                 stock.TotalQTY = stockCountDto.TotalQTY;
                 stock.StockInQTY = StockInQTY;
-                stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                stock.UpdateDate = _utilService.GetThailandDate();
+                stock.UpdateTime = _utilService.GetThailandTime();
                 stock.RecentStockLogId = stockLog.StockLogId;
 
                 // 6. บันทึกการอัปเดต Stock
@@ -326,8 +329,8 @@ namespace chickko.api.Services
                 if (stockLog == null)
                 {
                     // ✅ ถ้าไม่พบ StockLog ที่ระบุ ให้เพิ่มใหม่
-                    var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
-                    var time = TimeOnly.TryParse(stockInDto.StockInTime, out var parsedTime) ? parsedTime : TimeOnly.FromDateTime(DateTime.Now);
+                    var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : _utilService.GetThailandDate();
+                    var time = TimeOnly.TryParse(stockInDto.StockInTime, out var parsedTime) ? parsedTime : _utilService.GetThailandTime();
                     int dipQTY = stockInDto.PurchaseQTY - stockInDto.StockInQTY;
 
                     var newStockLog = new StockLog
@@ -366,8 +369,8 @@ namespace chickko.api.Services
 
                     stock.TotalQTY += stockInDto.PurchaseQTY;
                     stock.StockInQTY = Math.Max(0, stock.RequiredQTY - stock.TotalQTY);
-                    stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                    stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                    stock.UpdateDate = _utilService.GetThailandDate();
+                    stock.UpdateTime = _utilService.GetThailandTime();
                     stock.RecentStockLogId = newStockLog.StockLogId;
 
                     _context.Stocks.Update(stock);
@@ -376,8 +379,8 @@ namespace chickko.api.Services
                 else
                 {
                     // ✅ กรณีที่มี stockLog อยู่แล้ว (โค้ดเดิมที่มีอยู่)
-                    var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
-                    var time = TimeOnly.TryParse(stockInDto.StockInTime, out var parsedTime) ? parsedTime : TimeOnly.FromDateTime(DateTime.Now);
+                    var date = DateOnly.TryParseExact(stockInDto.StockInDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : _utilService.GetThailandDate();
+                    var time = TimeOnly.TryParse(stockInDto.StockInTime, out var parsedTime) ? parsedTime : _utilService.GetThailandTime();
                     int dipQTY = stockInDto.PurchaseQTY - stockInDto.StockInQTY;
 
                     // อัปเดตราคาต้นทุน (ถ้ามี)
@@ -396,8 +399,8 @@ namespace chickko.api.Services
                     stockLog.SupplyID = stockInDto.SupplyId;
                     stockLog.StockLogTypeID = 2;
                     stockLog.UpdateBy = stockInDto.UpdateBy ?? 0;
-                    stockLog.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                    stockLog.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                    stockLog.UpdateDate = _utilService.GetThailandDate();
+                    stockLog.UpdateTime = _utilService.GetThailandTime();
 
                     _context.StockLogs.Update(stockLog);
                     await _context.SaveChangesAsync();
@@ -408,8 +411,8 @@ namespace chickko.api.Services
 
                     stock.TotalQTY += stockInDto.PurchaseQTY;
                     stock.StockInQTY = Math.Max(0, stock.RequiredQTY - stock.TotalQTY);
-                    stock.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                    stock.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                    stock.UpdateDate = _utilService.GetThailandDate();
+                    stock.UpdateTime = _utilService.GetThailandTime();
                     stock.RecentStockLogId = stockLog.StockLogId;
 
                     _context.Stocks.Update(stock);
@@ -634,8 +637,8 @@ namespace chickko.api.Services
                         stockLog.Remark = stock.Remark;
                         stockLog.SupplyID = stock.SupplyId;
                         stockLog.UpdateBy = stock.UpdateBy ?? 0; // ใช้ UpdateBy ถ้ามี
-                        stockLog.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                        stockLog.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                        stockLog.UpdateDate = _utilService.GetThailandDate();
+                        stockLog.UpdateTime = _utilService.GetThailandTime();
 
                         await _context.SaveChangesAsync();
                     }

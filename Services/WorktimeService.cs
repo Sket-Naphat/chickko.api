@@ -11,11 +11,13 @@ namespace chickko.api.Services
     {
         private readonly ChickkoContext _context;
         private readonly ILogger<WorktimeService> _logger;
+        private readonly IUtilService _utilService;
 
-        public WorktimeService(ChickkoContext context, ILogger<WorktimeService> logger)
+        public WorktimeService(ChickkoContext context, ILogger<WorktimeService> logger, IUtilService utilService)
         {
             _context = context;
             _logger = logger;
+            _utilService = utilService;
         }
         public async Task<string> ClockIn(WorktimeDto WorktimeDto)
         {
@@ -452,8 +454,8 @@ namespace chickko.api.Services
                         }
 
                         _Worktime.TimeClockIn = timeClockIn;
-                        _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                        _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                        _Worktime.UpdateDate = _utilService.GetThailandDate();
+                        _Worktime.UpdateTime = _utilService.GetThailandTime();
                         _Worktime.UpdateBy = worktimeDto.CreatedBy;
 
                         await _context.SaveChangesAsync();
@@ -527,8 +529,8 @@ namespace chickko.api.Services
                         }
 
                         _Worktime.TimeClockOut = timeClockOut;
-                        _Worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                        _Worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                        _Worktime.UpdateDate = _utilService.GetThailandDate();
+                        _Worktime.UpdateTime = _utilService.GetThailandTime();
                         _Worktime.UpdateBy = worktimeDto.CreatedBy;
 
                         await _context.SaveChangesAsync();

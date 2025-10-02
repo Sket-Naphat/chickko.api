@@ -14,10 +14,12 @@ namespace chickko.api.controller
     {
         private readonly IStockService _stockService;
         private readonly ICostService _costService;
-        public StockController(IStockService stockService, ICostService costService)
+        private readonly IUtilService _utilService;
+        public StockController(IStockService stockService, ICostService costService, IUtilService utilService)
         {
             _stockService = stockService;
             _costService = costService;
+            _utilService = utilService;
         }
         [HttpGet("GetAllStockItem")]
         public async Task<IActionResult> GetAllStockItem()
@@ -71,8 +73,8 @@ namespace chickko.api.controller
                 costDate = DateOnly.TryParseExact(firstStock.StockCountDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now);
             }
 
-            var nowDate = DateOnly.FromDateTime(DateTime.Now);
-            var nowTime = TimeOnly.FromDateTime(DateTime.Now);
+            var nowDate = _utilService.GetThailandDate();
+            var nowTime = _utilService.GetThailandTime();
             var addCost = new Cost
             {
                 CostCategoryID = 1,

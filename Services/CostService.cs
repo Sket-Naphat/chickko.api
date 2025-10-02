@@ -12,10 +12,12 @@ namespace chickko.api.Services
     {
         private readonly ChickkoContext _context;
         private readonly ILogger<StockService> _logger;
-        public CostService(ChickkoContext context, ILogger<StockService> logger)
+        private readonly IUtilService _utilService;
+        public CostService(ChickkoContext context, ILogger<StockService> logger, IUtilService utilService)
         {
             _context = context;
             _logger = logger;
+            _utilService = utilService;
         }
         public async Task CreateCost(Cost _Cost)
         {
@@ -226,8 +228,8 @@ namespace chickko.api.Services
                         _cost.CostStatusID = 2; //ยังไม่จ่าย
                     }
                     _cost.UpdateBy = updateStockCostDto.UpdateBy;
-                    _cost.UpdateDate = DateOnly.FromDateTime(DateTime.Now);
-                    _cost.UpdateTime = TimeOnly.FromDateTime(DateTime.Now);
+                    _cost.UpdateDate = _utilService.GetThailandDate();
+                    _cost.UpdateTime = _utilService.GetThailandTime();
 
                     await _context.SaveChangesAsync();
                 }
@@ -289,7 +291,7 @@ namespace chickko.api.Services
         /// อัปเดตค่าแรงพนักงาน โดยสร้างรายการค่าใช้จ่าย (Cost) และเชื่อมโยงกับข้อมูลการทำงาน (Worktime)
         /// </summary>
         /// <param name="worktimeDto">ข้อมูลค่าแรงที่ต้องการอัปเดต</param>
-        public async Task UpdateWageCost(WorktimeDto worktimeDto)
+        public async Task UpdateWageCost(UpdateWageCostDto updateWageCostDto)
         {
             // เริ่ม Database Transaction เพื่อป้องกันข้อมูลไม่สมบูรณ์
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -299,21 +301,27 @@ namespace chickko.api.Services
                 // ขั้นตอนที่ 1: ตรวจสอบความถูกต้องของข้อมูลเข้า (Input Validation)
 
                 // ตรวจสอบว่ามี EmployeeID และมีค่ามากกว่า 0
-                if (worktimeDto.EmployeeID <= 0)
+                if (updateWageCostDto.EmployeeID <= 0)
                 {
                     throw new ArgumentException("EmployeeID is required");
                 }
 
                 // ตรวจสอบว่าค่าแรงมีค่ามากกว่า 0
-                if (worktimeDto.WageCost <= 0)
+                if (updateWageCostDto.WageCost <= 0)
                 {
                     throw new ArgumentException("WageCost must be greater than 0");
+                }
+
+                // ✅ ตรวจสอบ WorkDatePurchase array
+                if (updateWageCostDto.WorkDatePurchase == null || !updateWageCostDto.WorkDatePurchase.Any())
+                {
+                    throw new ArgumentException("WorkDatePurchase is required and cannot be empty");
                 }
 
                 // ขั้นตอนที่ 2: แปลงและตรวจสอบรูปแบบวันที่ (Date Parsing & Validation)
 
                 // กำหนดวันที่จ่ายเงิน: ใช้ PurchaseDate ที่ส่งมา หรือวันที่ปัจจุบันถ้าไม่มี
-                var purchaseDate = worktimeDto.PurchaseDate ?? DateTime.Now.ToString("yyyy-MM-dd");
+                var purchaseDate = updateWageCostDto.PurchaseDate ?? DateTime.Now.ToString("yyyy-MM-dd");
 
                 // แปลงและตรวจสอบรูปแบบวันที่จ่ายเงิน (ต้องเป็น yyyy-MM-dd)
                 if (!DateOnly.TryParseExact(purchaseDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var costDate))
@@ -321,42 +329,18 @@ namespace chickko.api.Services
                     throw new ArgumentException($"Invalid PurchaseDate format: {purchaseDate}");
                 }
 
-                DateOnly startDate, endDate;
-
-                // แปลงและตรวจสอบวันที่เริ่มต้น (StartDate)
-                if (!string.IsNullOrEmpty(worktimeDto.StartDate))
+                // ✅ แปลง WorkDatePurchase strings เป็น DateOnly array
+                var workDatesToUpdate = new List<DateOnly>();
+                foreach (var dateStr in updateWageCostDto.WorkDatePurchase)
                 {
-                    // ถ้ามี StartDate ให้แปลงจาก string เป็น DateOnly
-                    if (!DateOnly.TryParseExact(worktimeDto.StartDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out startDate))
+                    if (DateOnly.TryParseExact(dateStr, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var workDate))
                     {
-                        throw new ArgumentException($"Invalid StartDate format: {worktimeDto.StartDate}");
+                        workDatesToUpdate.Add(workDate);
                     }
-                }
-                else
-                {
-                    // ถ้าไม่มี StartDate ให้ใช้วันที่จ่ายเงินเป็นค่าเริ่มต้น
-                    startDate = costDate;
-                }
-
-                // แปลงและตรวจสอบวันที่สิ้นสุด (EndDate)
-                if (!string.IsNullOrEmpty(worktimeDto.EndDate))
-                {
-                    // ถ้ามี EndDate ให้แปลงจาก string เป็น DateOnly
-                    if (!DateOnly.TryParseExact(worktimeDto.EndDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out endDate))
+                    else
                     {
-                        throw new ArgumentException($"Invalid EndDate format: {worktimeDto.EndDate}");
+                        throw new ArgumentException($"Invalid WorkDate format: {dateStr}");
                     }
-                }
-                else
-                {
-                    // ถ้าไม่มี EndDate ให้ใช้วันที่จ่ายเงินเป็นค่าเริ่มต้น
-                    endDate = costDate;
-                }
-
-                // ตรวจสอบความสมเหตุสมผลของช่วงวันที่
-                if (startDate > endDate)
-                {
-                    throw new ArgumentException("StartDate cannot be greater than EndDate");
                 }
 
                 // ขั้นตอนที่ 3: สร้างข้อมูลค่าใช้จ่าย (Create Cost Record)
@@ -364,55 +348,69 @@ namespace chickko.api.Services
                 var cost = new Cost
                 {
                     CostCategoryID = 2, // หมวดหมู่ค่าแรง (Wage category)
-                    CostPrice = worktimeDto.WageCost, // จำนวนเงินค่าแรง
-                    CostDescription = worktimeDto.Remark ?? $"ค่าแรงพนักงาน ID: {worktimeDto.EmployeeID}", // รายละเอียด
+                    CostPrice = updateWageCostDto.WageCost, // จำนวนเงินค่าแรง
+                    CostDescription = updateWageCostDto.Remark ?? $"ค่าแรงพนักงาน ID: {updateWageCostDto.EmployeeID}", // รายละเอียด
                     CostDate = costDate, // วันที่เกิดค่าใช้จ่าย
                     CostTime = TimeOnly.FromDateTime(DateTime.Now), // เวลาที่เกิดค่าใช้จ่าย
-                    IsPurchase = worktimeDto.IsPurchase, // สถานะการจ่ายเงิน
-                    CostStatusID = worktimeDto.IsPurchase ? 3 : 2, // 3=จ่ายแล้ว, 2=ยังไม่จ่าย
-                    UpdateBy = worktimeDto.CreatedBy ?? 1, // ผู้อัปเดตข้อมูล
+                    IsPurchase = updateWageCostDto.IsPurchase, // สถานะการจ่ายเงิน
+                    CostStatusID = updateWageCostDto.IsPurchase ? 3 : 2, // 3=จ่ายแล้ว, 2=ยังไม่จ่าย
+                    UpdateBy = updateWageCostDto.CreatedBy ?? 1, // ผู้อัปเดตข้อมูล
                     UpdateDate = DateOnly.FromDateTime(DateTime.Now), // วันที่อัปเดต
                     UpdateTime = TimeOnly.FromDateTime(DateTime.Now) // เวลาที่อัปเดต
                 };
 
                 // ถ้าเป็นการจ่ายเงินจริง ให้บันทึกวันที่และเวลาที่จ่าย
-                if (worktimeDto.IsPurchase)
+                if (updateWageCostDto.IsPurchase)
                 {
-                    cost.PurchaseDate = DateOnly.FromDateTime(DateTime.Now);
-                    cost.PurchaseTime = TimeOnly.FromDateTime(DateTime.Now);
+                    cost.PurchaseDate = _utilService.GetThailandDate();
+                    cost.PurchaseTime = _utilService.GetThailandTime();
                 }
 
                 // บันทึก Cost ลงฐานข้อมูลและรับ CostId กลับมา
                 var createdCost = await CreateCostReturnCostID(cost);
-                _logger.LogInformation($"💰 Created Cost ID: {createdCost.CostId} for Employee {worktimeDto.EmployeeID}");
+                _logger.LogInformation($"💰 Created Cost ID: {createdCost.CostId} for Employee {updateWageCostDto.EmployeeID}");
 
                 // ขั้นตอนที่ 4: ค้นหาและอัปเดตข้อมูลการทำงาน (Update Worktime Records)
 
-                // ค้นหาข้อมูลการทำงานของพนักงานในช่วงวันที่ที่กำหนด
+                // ✅ ค้นหาข้อมูลการทำงานเฉพาะวันที่ที่ระบุใน WorkDatePurchase
                 var worktimes = await _context.Worktime
                     .Include(w => w.Employee) // รวมข้อมูลพนักงาน
-                    .Where(w => w.WorkDate >= startDate // วันที่ทำงาน >= วันเริ่มต้น
-                             && w.WorkDate <= endDate // วันที่ทำงาน <= วันสิ้นสุด
+                    .Where(w => workDatesToUpdate.Contains(w.WorkDate) // ✅ เฉพาะวันที่ที่ระบุ
                              && w.Employee != null // ต้องมีข้อมูลพนักงาน
                              && w.Employee.UserPermistionID != 1 // ไม่รวมเจ้าของ (Owner)
-                             && w.EmployeeID == worktimeDto.EmployeeID) // พนักงานคนที่ระบุ
+                             && w.EmployeeID == updateWageCostDto.EmployeeID) // พนักงานคนที่ระบุ
                     .ToListAsync();
 
                 // ตรวจสอบว่าพบข้อมูลการทำงานหรือไม่
                 if (!worktimes.Any())
                 {
-                    throw new InvalidOperationException($"ไม่พบข้อมูลการทำงานของพนักงาน ID {worktimeDto.EmployeeID} ในช่วง {startDate} ถึง {endDate}");
+                    var dateList = string.Join(", ", workDatesToUpdate.Select(d => d.ToString("yyyy-MM-dd")));
+                    throw new InvalidOperationException($"ไม่พบข้อมูลการทำงานของพนักงาน ID {updateWageCostDto.EmployeeID} ในวันที่: {dateList}");
+                }
+
+                // ✅ ตรวจสอบว่าพบครบทุกวันที่ที่ระบุหรือไม่
+                var foundWorkDates = worktimes.Select(w => w.WorkDate).ToHashSet();
+                var missingDates = workDatesToUpdate.Where(d => !foundWorkDates.Contains(d)).ToList();
+                
+                if (missingDates.Any())
+                {
+                    var missingDateList = string.Join(", ", missingDates.Select(d => d.ToString("yyyy-MM-dd")));
+                    _logger.LogWarning($"⚠️ ไม่พบข้อมูลการทำงานในวันที่: {missingDateList} สำหรับพนักงาน ID {updateWageCostDto.EmployeeID}");
                 }
 
                 // อัปเดตข้อมูลการทำงานแต่ละรายการ
                 var totalUpdated = 0;
+                var updatedDates = new List<string>();
+                
                 foreach (var worktime in worktimes)
                 {
                     worktime.CostID = createdCost.CostId; // เชื่อมโยงกับ Cost ที่สร้างใหม่
-                    worktime.IsPurchase = worktimeDto.IsPurchase; // อัปเดตสถานะการจ่ายเงิน
-                    worktime.Remark = worktimeDto.Remark ?? ""; // อัปเดตหมายเหตุ
-                    worktime.UpdateDate = DateOnly.FromDateTime(DateTime.Now); // วันที่อัปเดต
-                    worktime.UpdateTime = TimeOnly.FromDateTime(DateTime.Now); // เวลาที่อัปเดต
+                    worktime.IsPurchase = updateWageCostDto.IsPurchase; // อัปเดตสถานะการจ่ายเงิน
+                    worktime.Remark = updateWageCostDto.Remark ?? ""; // อัปเดตหมายเหตุ
+                    worktime.UpdateDate = _utilService.GetThailandDate(); // วันที่อัปเดต
+                    worktime.UpdateTime = _utilService.GetThailandTime(); // เวลาที่อัปเดต
+                    worktime.UpdateBy = updateWageCostDto.CreatedBy ?? 1; // ผู้อัปเดตข้อมูล
+                    updatedDates.Add(worktime.WorkDate.ToString("yyyy-MM-dd"));
                     totalUpdated++;
                 }
 
@@ -422,11 +420,12 @@ namespace chickko.api.Services
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"✅ Updated {totalUpdated} worktime records with Cost ID: {createdCost.CostId}");
+                _logger.LogInformation($"📅 Updated work dates: {string.Join(", ", updatedDates)}");
 
                 // ยืนยัน Transaction (Commit) - ทำให้การเปลี่ยนแปลงถาวร
                 await transaction.CommitAsync();
 
-                _logger.LogInformation($"🎯 UpdateWageCost completed successfully for Employee {worktimeDto.EmployeeID}");
+                _logger.LogInformation($"🎯 UpdateWageCost completed successfully for Employee {updateWageCostDto.EmployeeID}");
             }
             catch (Exception ex)
             {
@@ -436,7 +435,7 @@ namespace chickko.api.Services
                 await transaction.RollbackAsync();
 
                 // บันทึก Error Log
-                _logger.LogError(ex, "❌ UpdateWageCost failed for Employee {EmployeeID}", worktimeDto.EmployeeID);
+                _logger.LogError(ex, "❌ UpdateWageCost failed for Employee {EmployeeID}", updateWageCostDto.EmployeeID);
 
                 // ส่ง Exception ต่อไปยัง caller
                 throw;
