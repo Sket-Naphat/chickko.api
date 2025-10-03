@@ -448,7 +448,6 @@ public class OrdersService : IOrdersService
                 .Include(oh => oh.OrderType)
                 .Include(oh => oh.DischargeType)
                 .Where(oh => oh.OrderTypeId != 3);   // กรองยอดขายหน้าร้าน (ไม่ใช่เดลิเวอรี่)
-                                                     //.Where(oh => oh.IsFinishOrder == true); // ถ้าต้องการเฉพาะที่ปิดบิลแล้ว
 
             // ✅ แก้ไขการกรองปี/เดือน - ใช้ .Year/.Month property ของ DateOnly
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
@@ -468,13 +467,14 @@ public class OrdersService : IOrdersService
                     c.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
 
-            // ✅ Query ครั้งเดียวเพื่อหา daily sales และ menu details พร้อมกัน
+            // ✅ Query ครั้งเดียวเพื่อหา order details สำหรับ TopSellingItems
             var orderDetailsQuery = _context.OrderDetails
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3 && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3 
+                          && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
 
-            // Apply same filtering as main query
+            // Apply same filtering as main query for order details
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
             {
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
@@ -492,23 +492,87 @@ public class OrdersService : IOrdersService
                     od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
 
-            // ✅ ดึงข้อมูล daily sales
-            var dailySales = await query
-                .GroupBy(oh => oh.OrderDate)
-                .Select(g => new DailySaleDto
+            // ✅ ดึงข้อมูล order headers สำหรับ daily sales และ peak hours
+            var allOrderHeaders = await query.ToListAsync();
+
+            // ✅ คำนวณ Peak Hours สำหรับแต่ละวัน - ทุกช่วงที่มีออเดอร์
+            var dailyPeakHours = allOrderHeaders
+                .Where(oh => oh.OrderDate.HasValue && oh.OrderTime.HasValue)
+                .GroupBy(oh => oh.OrderDate!.Value)
+                .ToDictionary(dateGroup => dateGroup.Key, dateGroup =>
                 {
-                    SaleDate = g.Key ?? DateOnly.MinValue,
-                    Orders = g.Count(),
-                    TotalAmount = g.Sum(x => (decimal?)x.TotalPrice) ?? 0,
-                    AvgPerOrder = Math.Round(
-                        (double)((decimal?)g.Average(x => (decimal?)x.TotalPrice) ?? 0), 2),
-                    TopSellingItems = new List<SoldMenuDto>(), // Initialize empty list
-                    totalOrders = g.Count()
+                    // หาช่วงเวลาที่มีออเดอร์
+                    var ordersWithTime = dateGroup.Where(oh => oh.OrderTime.HasValue).ToList();
+                    
+                    if (!ordersWithTime.Any())
+                        return new List<PeakHourDto>();
+
+                    // หาช่วงเวลาตั้งแต่ออเดอร์แรกถึงออเดอร์สุดท้าย
+                    var firstOrderHour = ordersWithTime.Min(oh => oh.OrderTime!.Value.Hour);
+                    var lastOrderHour = ordersWithTime.Max(oh => oh.OrderTime!.Value.Hour);
+
+                    // สร้างรายการ PeakHour สำหรับทุกช่วงเวลาที่มีออเดอร์
+                    var peakHours = new List<PeakHourDto>();
+                    
+                    for (int hour = firstOrderHour; hour <= lastOrderHour; hour++)
+                    {
+                        var ordersInHour = ordersWithTime
+                            .Where(oh => oh.OrderTime!.Value.Hour == hour)
+                            .ToList();
+
+                        // เฉพาะช่วงที่มีออเดอร์เท่านั้น
+                        if (ordersInHour.Any())
+                        {
+                            // ✅ คำนวณยอดรวมในชั่วโมงนั้นจาก TotalPrice
+                            var hourlyTotalSales = ordersInHour.Sum(oh => oh.TotalPrice);
+                            var hourlyOrderCount = ordersInHour.Count;
+
+                            peakHours.Add(new PeakHourDto
+                            {
+                                HourRange = $"{hour:D2}:00-{(hour + 1):D2}:00",
+                                OrderCount = hourlyOrderCount,
+                                TotalSales = hourlyTotalSales, // ✅ ยอดรวมจริงในชั่วโมงนั้น
+                                
+                                // ✅ AvgPerOrder = ยอดรวมในชั่วโมง ÷ จำนวน order ในชั่วโมง
+                                AvgPerOrder = Math.Round(
+                                    (double)(hourlyOrderCount > 0 ? hourlyTotalSales / hourlyOrderCount : 0), 2)
+                            });
+                        }
+                    }
+
+                    // เรียงตามจำนวนออเดอร์มากที่สุด
+                    return peakHours.OrderByDescending(x => x.OrderCount).ToList();
+                });
+
+            // ✅ ดึงข้อมูล daily sales โดยเอาแค่ AvgPerOrder
+            var dailySales = allOrderHeaders
+                .Where(oh => oh.OrderDate.HasValue)
+                .GroupBy(oh => oh.OrderDate!.Value)
+                .Select(g => {
+                    var totalAmount = g.Sum(x => x.TotalPrice); // ✅ ยอดรวมทั้งหมดในวันนั้น
+                    var orderCount = g.Count(); // ✅ จำนวน order ในวันนั้น
+
+                    return new DailySaleDto
+                    {
+                        SaleDate = g.Key,
+                        Orders = orderCount,
+                        TotalAmount = totalAmount,
+                        
+                        // ✅ AvgPerOrder = ยอดรวมทั้งหมด ÷ จำนวน order
+                        AvgPerOrder = Math.Round(
+                            (double)(orderCount > 0 ? totalAmount / orderCount : 0), 2),
+                        
+                        TopSellingItems = new List<SoldMenuDto>(),
+                        totalOrders = orderCount,
+                        
+                        // ✅ เพิ่ม PeakHours
+                        PeakHours = new List<PeakHourDto>()
+                    };
                 })
                 .OrderByDescending(x => x.SaleDate)
-                .ToListAsync();
+                .ToList();
 
-            // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory
+            // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory สำหรับ TopSellingItems
             var allOrderDetails = await orderDetailsQuery.ToListAsync();
 
             // Group by date and menu, then calculate top selling items for each date
@@ -535,19 +599,30 @@ public class OrdersService : IOrdersService
                         .ToList()
                 );
 
-            // ✅ Assign top selling items to each daily sale
+            // ✅ Assign ข้อมูลเพิ่มเติมให้แต่ละ daily sale
             foreach (var dailySale in dailySales)
             {
-                if (dailySale.SaleDate != null && dailyMenuSales.TryGetValue(dailySale.SaleDate.Value, out var topItems))
+                if (dailySale.SaleDate != null)
                 {
-                    dailySale.TopSellingItems = topItems;
+                    // Assign top selling items
+                    if (dailyMenuSales.TryGetValue(dailySale.SaleDate.Value, out var topItems))
+                    {
+                        dailySale.TopSellingItems = topItems;
+                    }
+
+                    // ✅ Assign peak hours (ทุกช่วงที่มีออเดอร์)
+                    if (dailyPeakHours.TryGetValue(dailySale.SaleDate.Value, out var peakHours))
+                    {
+                        dailySale.PeakHours = peakHours;
+                    }
                 }
             }
 
             // ✅ เพิ่ม logging สำหรับ debug
             _logger.LogInformation($"📊 GetDailyDineInSalesReport: Found {dailySales.Count} records" +
                 $" | Year: {saleDateDto.Year}" +
-                $" | Month: {saleDateDto.Month}");
+                $" | Month: {saleDateDto.Month}" +
+                $" | Excluding MenuId: 20, 7");
 
             return dailySales;
         }
@@ -560,7 +635,6 @@ public class OrdersService : IOrdersService
             }
             return new List<DailySaleDto>();
         }
-
     }
     public async Task<List<DailySaleDto>> GetDailyDeliverySalesReport(SaleDateDto saleDateDto)
     {
@@ -575,41 +649,41 @@ public class OrdersService : IOrdersService
             var orderDetailsQuery = _context.OrderDetails
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId == 3 ); // เฉพาะเดลิเวอรี่ 
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId == 3); // เฉพาะเดลิเวอรี่ 
 
             // ✅ เพิ่มการกรองปี/เดือน สำหรับ Deliveries
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
             {
                 deliveryQuery = deliveryQuery.Where(d => d.SaleDate.Year == saleDateDto.Year.Value &&
-                                           d.SaleDate.Month == saleDateDto.Month.Value);
+                                       d.SaleDate.Month == saleDateDto.Month.Value);
 
                 orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue &&
-                                            oh.OrderDate.Value.Year == saleDateDto.Year.Value &&
-                                            oh.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                        oh.OrderDate.Value.Year == saleDateDto.Year.Value &&
+                                        oh.OrderDate.Value.Month == saleDateDto.Month.Value);
 
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
-                                                od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value &&
-                                                od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                            od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value &&
+                                            od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
             else if (saleDateDto.Year.HasValue)
             {
                 deliveryQuery = deliveryQuery.Where(d => d.SaleDate.Year == saleDateDto.Year.Value);
 
                 orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue &&
-                                                oh.OrderDate.Value.Year == saleDateDto.Year.Value);
+                                            oh.OrderDate.Value.Year == saleDateDto.Year.Value);
 
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
-                                                    od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value);
+                                                od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value);
             }
             else if (saleDateDto.Month.HasValue)
             {
                 deliveryQuery = deliveryQuery.Where(d => d.SaleDate.Month == saleDateDto.Month.Value);
 
                 orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue &&
-                                                oh.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                            oh.OrderDate.Value.Month == saleDateDto.Month.Value);
 
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
-                                                    od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                                od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
 
             // ✅ ดึงข้อมูลจาก Deliveries
@@ -623,34 +697,94 @@ public class OrdersService : IOrdersService
                 .Select(g => new { SaleDate = g.Key, OrderCount = g.Count() })
                 .ToListAsync();
 
-            // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory (สำหรับ TopSellingItems)
-            var allOrderDetails = await orderDetailsQuery.ToListAsync();
+            // ✅ ดึงข้อมูล order headers สำหรับ peak hours calculation
+            var allOrderHeaders = await orderCountQuery.ToListAsync();
 
-            // ✅ Group by date and menu, then calculate top selling items for each date
-            var dailyMenuSales = allOrderDetails
-                .Where(od => od.OrderHeader.OrderDate.HasValue)
-                .GroupBy(od => od.OrderHeader.OrderDate!.Value)
+            // ✅ คำนวณ Peak Hours สำหรับแต่ละวัน - ทุกช่วงที่มีออเดอร์
+            var dailyPeakHours = allOrderHeaders
+                .Where(oh => oh.OrderDate.HasValue && oh.OrderTime.HasValue)
+                .GroupBy(oh => oh.OrderDate!.Value)
                 .ToDictionary(dateGroup => dateGroup.Key, dateGroup =>
-                    dateGroup
-                        .GroupBy(od => new { od.MenuId, MenuName = od.Menu?.Name ?? "Unknown" })
-                        .Select(menuGroup => new SoldMenuDto
-                        {
-                            MenuId = menuGroup.Key.MenuId,
-                            MenuName = menuGroup.Key.MenuName,
-                            QuantitySold = menuGroup.Sum(od => od.Quantity),
-                            TotalSales = menuGroup.Sum(od => od.Price * od.Quantity),
-                            TotalCost = menuGroup.Sum(od => (od.Menu?.Cost ?? 0) * od.Quantity),
-                            TotalProfit = menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity),
-                            ProfitMargin = menuGroup.Sum(od => od.Price * od.Quantity) > 0 ?
-                                (double)(menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity) /
-                                menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
-                        })
-                        .OrderByDescending(x => x.QuantitySold)
-                        .Take(5) // ✅ เอา 5 รายการแรกที่ขายดีที่สุด
-                        .ToList()
-                );
+                {
+                    // หาช่วงเวลาที่มีออเดอร์
+                    var ordersWithTime = dateGroup.Where(oh => oh.OrderTime.HasValue).ToList();
+                    
+                    if (!ordersWithTime.Any())
+                        return new List<PeakHourDto>();
 
-            // ✅ Join ข้อมูลจาก Deliveries และ OrderHeaders
+                    // หาช่วงเวลาตั้งแต่ออเดอร์แรกถึงออเดอร์สุดท้าย
+                    var firstOrderHour = ordersWithTime.Min(oh => oh.OrderTime!.Value.Hour);
+                    var lastOrderHour = ordersWithTime.Max(oh => oh.OrderTime!.Value.Hour);
+
+                    // หายอดรวมในวันนั้นจาก Deliveries table
+                    var dailyTotalSales = deliveryData
+                        .Where(dd => dd.SaleDate == dateGroup.Key)
+                        .Sum(dd => dd.NetSales);
+
+                    // สร้างรายการ PeakHour สำหรับทุกช่วงเวลาที่มีออเดอร์
+                    var peakHours = new List<PeakHourDto>();
+                    
+                    for (int hour = firstOrderHour; hour <= lastOrderHour; hour++)
+                    {
+                        var ordersInHour = ordersWithTime
+                            .Where(oh => oh.OrderTime!.Value.Hour == hour)
+                            .ToList();
+
+                        // เฉพาะช่วงที่มีออเดอร์เท่านั้น
+                        if (ordersInHour.Any())
+                        {
+                            var hourlyOrderCount = ordersInHour.Count;
+                            
+                            // ประมาณการยอดขายในชั่วโมงนั้นตามสัดส่วนจำนวนออเดอร์
+                            var hourlyRevenue = dateGroup.Count() > 0
+                                ? dailyTotalSales * hourlyOrderCount / dateGroup.Count()
+                                : 0;
+
+                            peakHours.Add(new PeakHourDto
+                            {
+                                HourRange = $"{hour:D2}:00-{(hour + 1):D2}:00",
+                                OrderCount = hourlyOrderCount,
+                                TotalSales = hourlyRevenue,
+                                
+                                // ✅ AvgPerOrder = ยอดรวมในชั่วโมง ÷ จำนวน order ในชั่วโมง
+                                AvgPerOrder = Math.Round(
+                                    (double)(hourlyOrderCount > 0 ? hourlyRevenue / hourlyOrderCount : 0), 2)
+                            });
+                        }
+                    }
+
+                    // เรียงตามจำนวนออเดอร์มากที่สุด
+                    return peakHours.OrderByDescending(x => x.OrderCount).ToList();
+                });
+
+        // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory (สำหรับ TopSellingItems)
+        var allOrderDetails = await orderDetailsQuery.ToListAsync();
+
+        // ✅ Group by date and menu, then calculate top selling items for each date
+        var dailyMenuSales = allOrderDetails
+            .Where(od => od.OrderHeader.OrderDate.HasValue)
+            .GroupBy(od => od.OrderHeader.OrderDate!.Value)
+            .ToDictionary(dateGroup => dateGroup.Key, dateGroup =>
+                dateGroup
+                    .GroupBy(od => new { od.MenuId, MenuName = od.Menu?.Name ?? "Unknown" })
+                    .Select(menuGroup => new SoldMenuDto
+                    {
+                        MenuId = menuGroup.Key.MenuId,
+                        MenuName = menuGroup.Key.MenuName,
+                        QuantitySold = menuGroup.Sum(od => od.Quantity),
+                        TotalSales = menuGroup.Sum(od => od.Price * od.Quantity),
+                        TotalCost = menuGroup.Sum(od => (od.Menu?.Cost ?? 0) * od.Quantity),
+                        TotalProfit = menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity),
+                        ProfitMargin = menuGroup.Sum(od => od.Price * od.Quantity) > 0 ?
+                            (double)(menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity) /
+                            menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
+                    })
+                    .OrderByDescending(x => x.QuantitySold)
+                    .Take(5) // ✅ เอา 5 รายการแรกที่ขายดีที่สุด
+                    .ToList()
+            );
+
+            // ✅ Join ข้อมูลจาก Deliveries และ OrderHeaders พร้อมเพิ่ม PeakHours
             var dailySales = deliveryData
                 .GroupBy(d => d.SaleDate)
                 .Select(g =>
@@ -669,18 +803,29 @@ public class OrdersService : IOrdersService
                             ? Math.Round((double)(totalNetSales / orderCount), 2)
                             : 0,
                         TopSellingItems = new List<SoldMenuDto>(), // ✅ Initialize empty list
+                        PeakHours = new List<PeakHourDto>(), // ✅ Initialize empty list
                         totalOrders = orderCount
                     };
                 })
                 .OrderByDescending(x => x.SaleDate)
                 .ToList();
 
-            // ✅ Assign top selling items to each daily sale
+            // ✅ Assign ข้อมูลเพิ่มเติมให้แต่ละ daily sale
             foreach (var dailySale in dailySales)
             {
-                if (dailySale.SaleDate != null && dailyMenuSales.TryGetValue(dailySale.SaleDate.Value, out var topItems))
+                if (dailySale.SaleDate != null)
                 {
-                    dailySale.TopSellingItems = topItems;
+                    // Assign top selling items
+                    if (dailyMenuSales.TryGetValue(dailySale.SaleDate.Value, out var topItems))
+                    {
+                        dailySale.TopSellingItems = topItems;
+                    }
+
+                    // ✅ Assign peak hours (ทุกช่วงที่มีออเดอร์)
+                    if (dailyPeakHours.TryGetValue(dailySale.SaleDate.Value, out var peakHours))
+                    {
+                        dailySale.PeakHours = peakHours;
+                    }
                 }
             }
 
@@ -900,11 +1045,11 @@ public class OrdersService : IOrdersService
             _logger.LogInformation($"📋 Retrieved {deliveryOrders.Count} delivery orders for {deliveryDto.SaleDate}");
 
             // Log สรุปยอดขาย
-            var totalOrders = deliveryOrders.Count;
-            var totalRevenue = deliveryOrders.Sum(x => x.TotalPrice);
-            var totalGrabRevenue = deliveryOrders.Sum(x => x.TotalGrabPrice);
+            // var totalOrders = deliveryOrders.Count;
+            // var totalRevenue = deliveryOrders.Sum(x => x.TotalSales);
+            // var totalGrabRevenue = deliveryOrders.Sum(x => x.TotalGrabPrice);
 
-            _logger.LogInformation($"💰 Summary for {deliveryDto.SaleDate}: {totalOrders} orders, Revenue: ฿{totalRevenue:N2}, Grab Revenue: ฿{totalGrabRevenue:N2}");
+            //_logger.LogInformation($"💰 Summary for {deliveryDto.SaleDate}: {totalOrders} orders, Revenue: ฿{totalRevenue:N2}, Grab Revenue: ฿{totalGrabRevenue:N2}");
 
             return deliveryOrders;
         }

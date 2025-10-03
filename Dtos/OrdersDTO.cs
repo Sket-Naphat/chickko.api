@@ -6,6 +6,15 @@ public class DailySaleDto
     public double? AvgPerOrder { get; set; } = null;  // ค่าเฉลี่ยต่อบิล
     public List<SoldMenuDto> TopSellingItems { get; set; } = new(); // รายการขายดี 5 อันดับ
     public int? totalOrders { get; set; } = null; // For total orders in the month
+    public List<PeakHourDto> PeakHours { get; set; } = new(); // ช่วงเวลาที่ขายดี
+}
+// ✅ DTO ใหม่สำหรับช่วงเวลาที่ขายดี
+public class PeakHourDto
+{
+    public string HourRange { get; set; } = string.Empty; // เช่น "12:00-13:00"
+    public int OrderCount { get; set; } = 0; // จำนวนออเดอร์ในช่วงเวลานั้น
+    public decimal TotalSales { get; set; } = 0; // ยอดขายรวมในช่วงเวลานั้น
+    public double AvgPerOrder { get; set; } = 0; // ค่าเฉลี่ยต่อออเดอร์ในช่วงเวลานั้น
 }
 public class IncomeDto
 {
