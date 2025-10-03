@@ -472,7 +472,7 @@ public class OrdersService : IOrdersService
             var orderDetailsQuery = _context.OrderDetails
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3); // กรองยอดขายหน้าร้าน
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3 && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
 
             // Apply same filtering as main query
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
@@ -575,41 +575,41 @@ public class OrdersService : IOrdersService
             var orderDetailsQuery = _context.OrderDetails
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId == 3); // เฉพาะเดลิเวอรี่
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId == 3 ); // เฉพาะเดลิเวอรี่ 
 
             // ✅ เพิ่มการกรองปี/เดือน สำหรับ Deliveries
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
             {
                 deliveryQuery = deliveryQuery.Where(d => d.SaleDate.Year == saleDateDto.Year.Value &&
-                                               d.SaleDate.Month == saleDateDto.Month.Value);
+                                           d.SaleDate.Month == saleDateDto.Month.Value);
 
                 orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue &&
-                                                oh.OrderDate.Value.Year == saleDateDto.Year.Value &&
-                                                oh.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                            oh.OrderDate.Value.Year == saleDateDto.Year.Value &&
+                                            oh.OrderDate.Value.Month == saleDateDto.Month.Value);
 
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
-                                                    od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value &&
-                                                    od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                                od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value &&
+                                                od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
             else if (saleDateDto.Year.HasValue)
             {
                 deliveryQuery = deliveryQuery.Where(d => d.SaleDate.Year == saleDateDto.Year.Value);
 
                 orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue &&
-                                                    oh.OrderDate.Value.Year == saleDateDto.Year.Value);
+                                                oh.OrderDate.Value.Year == saleDateDto.Year.Value);
 
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
-                                                        od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value);
+                                                    od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value);
             }
             else if (saleDateDto.Month.HasValue)
             {
                 deliveryQuery = deliveryQuery.Where(d => d.SaleDate.Month == saleDateDto.Month.Value);
 
                 orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue &&
-                                                    oh.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                                oh.OrderDate.Value.Month == saleDateDto.Month.Value);
 
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
-                                                        od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
+                                                    od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
 
             // ✅ ดึงข้อมูลจาก Deliveries
