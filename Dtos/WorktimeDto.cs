@@ -25,6 +25,7 @@ namespace chickko.api.Dtos
         public string? EndDate { get; set; }
         public string? PurchaseDate { get; set; }
         public int? CreatedBy { get; set; }
+        public double? WageCostNoPurchase { get; set; } = 0;
     }
 
     public class WorktimeSummaryDto

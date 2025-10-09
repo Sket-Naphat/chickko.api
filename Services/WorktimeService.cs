@@ -279,6 +279,9 @@ namespace chickko.api.Services
                         TotalWorktime = g.Sum(x => x.TotalWorktime),
                         TotalPrice = g.Sum(x => x.Price),
                         TotalWageCost = g.Sum(x => x.WageCost),
+                        // ✅ เพิ่ม WageCostNoPurchase - เฉพาะรายการที่ IsPurchase = false
+                        TotalWageCostNoPurchase = g.Where(x => x.IsPurchase == false).Sum(x => x.WageCost),
+
                         Details = g.Select(w => new WorktimeDto
                         {
                             WorktimeID = w.WorktimeID,
@@ -291,6 +294,7 @@ namespace chickko.api.Services
                             ClockOutLocation = w.ClockOutLocation,
                             TotalWorktime = w.TotalWorktime,
                             WageCost = w.WageCost,
+                            WageCostNoPurchase = w.IsPurchase == false ? w.WageCost : 0,
                             Bonus = w.Bonus,
                             Price = w.Price,
                             IsPurchase = w.IsPurchase,
@@ -306,6 +310,8 @@ namespace chickko.api.Services
                     TotalWorktime = s.TotalWorktime,
                     Price = s.TotalPrice,
                     WageCost = s.TotalWageCost,
+                    // ✅ เพิ่ม WageCostNoPurchase ในผลลัพธ์
+                    WageCostNoPurchase = s.TotalWageCostNoPurchase,
                 }).ToList();
 
                 return result;
