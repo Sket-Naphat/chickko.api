@@ -471,7 +471,7 @@ public class OrdersService : IOrdersService
             var orderDetailsQuery = _context.OrderDetails
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3 
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3
                           && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
 
             // Apply same filtering as main query for order details
@@ -503,7 +503,7 @@ public class OrdersService : IOrdersService
                 {
                     // หาช่วงเวลาที่มีออเดอร์
                     var ordersWithTime = dateGroup.Where(oh => oh.OrderTime.HasValue).ToList();
-                    
+
                     if (!ordersWithTime.Any())
                         return new List<PeakHourDto>();
 
@@ -513,7 +513,7 @@ public class OrdersService : IOrdersService
 
                     // สร้างรายการ PeakHour สำหรับทุกช่วงเวลาที่มีออเดอร์
                     var peakHours = new List<PeakHourDto>();
-                    
+
                     for (int hour = firstOrderHour; hour <= lastOrderHour; hour++)
                     {
                         var ordersInHour = ordersWithTime
@@ -532,7 +532,7 @@ public class OrdersService : IOrdersService
                                 HourRange = $"{hour:D2}:00-{(hour + 1):D2}:00",
                                 OrderCount = hourlyOrderCount,
                                 TotalSales = hourlyTotalSales, // ✅ ยอดรวมจริงในชั่วโมงนั้น
-                                
+
                                 // ✅ AvgPerOrder = ยอดรวมในชั่วโมง ÷ จำนวน order ในชั่วโมง
                                 AvgPerOrder = Math.Round(
                                     (double)(hourlyOrderCount > 0 ? hourlyTotalSales / hourlyOrderCount : 0), 2)
@@ -548,8 +548,15 @@ public class OrdersService : IOrdersService
             var dailySales = allOrderHeaders
                 .Where(oh => oh.OrderDate.HasValue)
                 .GroupBy(oh => oh.OrderDate!.Value)
-                .Select(g => {
-                    var totalAmount = g.Sum(x => x.TotalPrice); // ✅ ยอดรวมทั้งหมดในวันนั้น
+                .Select(g =>
+                {
+                    var totalAmount = g.Sum(x =>
+                    {
+                        var discountPrice = x.DiscountPrice ?? 0; // ถ้า null ให้เป็น 0
+                        return discountPrice > 0
+                            ? x.TotalPrice - discountPrice  // หัก discount ถ้ามี
+                            : x.TotalPrice;                 // ไม่หัก discount ถ้าไม่มี
+                    });
                     var orderCount = g.Count(); // ✅ จำนวน order ในวันนั้น
 
                     return new DailySaleDto
@@ -557,14 +564,14 @@ public class OrdersService : IOrdersService
                         SaleDate = g.Key,
                         Orders = orderCount,
                         TotalAmount = totalAmount,
-                        
+                        TotalDiscount = g.Sum(x => x.DiscountPrice ?? 0), // ยอดส่วนลดรวมในวันนั้น
                         // ✅ AvgPerOrder = ยอดรวมทั้งหมด ÷ จำนวน order
                         AvgPerOrder = Math.Round(
                             (double)(orderCount > 0 ? totalAmount / orderCount : 0), 2),
-                        
+
                         TopSellingItems = new List<SoldMenuDto>(),
                         totalOrders = orderCount,
-                        
+
                         // ✅ เพิ่ม PeakHours
                         PeakHours = new List<PeakHourDto>()
                     };
@@ -708,7 +715,7 @@ public class OrdersService : IOrdersService
                 {
                     // หาช่วงเวลาที่มีออเดอร์
                     var ordersWithTime = dateGroup.Where(oh => oh.OrderTime.HasValue).ToList();
-                    
+
                     if (!ordersWithTime.Any())
                         return new List<PeakHourDto>();
 
@@ -723,7 +730,7 @@ public class OrdersService : IOrdersService
 
                     // สร้างรายการ PeakHour สำหรับทุกช่วงเวลาที่มีออเดอร์
                     var peakHours = new List<PeakHourDto>();
-                    
+
                     for (int hour = firstOrderHour; hour <= lastOrderHour; hour++)
                     {
                         var ordersInHour = ordersWithTime
@@ -734,7 +741,7 @@ public class OrdersService : IOrdersService
                         if (ordersInHour.Any())
                         {
                             var hourlyOrderCount = ordersInHour.Count;
-                            
+
                             // ประมาณการยอดขายในชั่วโมงนั้นตามสัดส่วนจำนวนออเดอร์
                             var hourlyRevenue = dateGroup.Count() > 0
                                 ? dailyTotalSales * hourlyOrderCount / dateGroup.Count()
@@ -745,7 +752,7 @@ public class OrdersService : IOrdersService
                                 HourRange = $"{hour:D2}:00-{(hour + 1):D2}:00",
                                 OrderCount = hourlyOrderCount,
                                 TotalSales = hourlyRevenue,
-                                
+
                                 // ✅ AvgPerOrder = ยอดรวมในชั่วโมง ÷ จำนวน order ในชั่วโมง
                                 AvgPerOrder = Math.Round(
                                     (double)(hourlyOrderCount > 0 ? hourlyRevenue / hourlyOrderCount : 0), 2)
@@ -757,32 +764,32 @@ public class OrdersService : IOrdersService
                     return peakHours.OrderByDescending(x => x.OrderCount).ToList();
                 });
 
-        // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory (สำหรับ TopSellingItems)
-        var allOrderDetails = await orderDetailsQuery.ToListAsync();
+            // ✅ ดึงข้อมูล order details ครั้งเดียวแล้วจัดกลุ่มใน memory (สำหรับ TopSellingItems)
+            var allOrderDetails = await orderDetailsQuery.ToListAsync();
 
-        // ✅ Group by date and menu, then calculate top selling items for each date
-        var dailyMenuSales = allOrderDetails
-            .Where(od => od.OrderHeader.OrderDate.HasValue)
-            .GroupBy(od => od.OrderHeader.OrderDate!.Value)
-            .ToDictionary(dateGroup => dateGroup.Key, dateGroup =>
-                dateGroup
-                    .GroupBy(od => new { od.MenuId, MenuName = od.Menu?.Name ?? "Unknown" })
-                    .Select(menuGroup => new SoldMenuDto
-                    {
-                        MenuId = menuGroup.Key.MenuId,
-                        MenuName = menuGroup.Key.MenuName,
-                        QuantitySold = menuGroup.Sum(od => od.Quantity),
-                        TotalSales = menuGroup.Sum(od => od.Price * od.Quantity),
-                        TotalCost = menuGroup.Sum(od => (od.Menu?.Cost ?? 0) * od.Quantity),
-                        TotalProfit = menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity),
-                        ProfitMargin = menuGroup.Sum(od => od.Price * od.Quantity) > 0 ?
-                            (double)(menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity) /
-                            menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
-                    })
-                    .OrderByDescending(x => x.QuantitySold)
-                    .Take(5) // ✅ เอา 5 รายการแรกที่ขายดีที่สุด
-                    .ToList()
-            );
+            // ✅ Group by date and menu, then calculate top selling items for each date
+            var dailyMenuSales = allOrderDetails
+                .Where(od => od.OrderHeader.OrderDate.HasValue)
+                .GroupBy(od => od.OrderHeader.OrderDate!.Value)
+                .ToDictionary(dateGroup => dateGroup.Key, dateGroup =>
+                    dateGroup
+                        .GroupBy(od => new { od.MenuId, MenuName = od.Menu?.Name ?? "Unknown" })
+                        .Select(menuGroup => new SoldMenuDto
+                        {
+                            MenuId = menuGroup.Key.MenuId,
+                            MenuName = menuGroup.Key.MenuName,
+                            QuantitySold = menuGroup.Sum(od => od.Quantity),
+                            TotalSales = menuGroup.Sum(od => od.Price * od.Quantity),
+                            TotalCost = menuGroup.Sum(od => (od.Menu?.Cost ?? 0) * od.Quantity),
+                            TotalProfit = menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity),
+                            ProfitMargin = menuGroup.Sum(od => od.Price * od.Quantity) > 0 ?
+                                (double)(menuGroup.Sum(od => (od.Price - (od.Menu?.Cost ?? 0)) * od.Quantity) /
+                                menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
+                        })
+                        .OrderByDescending(x => x.QuantitySold)
+                        .Take(5) // ✅ เอา 5 รายการแรกที่ขายดีที่สุด
+                        .ToList()
+                );
 
             // ✅ Join ข้อมูลจาก Deliveries และ OrderHeaders พร้อมเพิ่ม PeakHours
             var dailySales = deliveryData
@@ -1068,22 +1075,19 @@ public class OrdersService : IOrdersService
 
         try
         {
-            // ใช้ SQL Query ที่ optimize แล้ว
-            var query = from oh in _context.OrderHeaders
-                        join ot in _context.Ordertypes on oh.OrderTypeId equals ot.OrderTypeId into otGroup
-                        from ot in otGroup.DefaultIfEmpty()
-                        where oh.OrderDate == incomeDto.SaleDate
-                              && oh.OrderTypeId != 3 // เฉพาะหน้าร้าน
-                        orderby oh.OrderTime descending
-                        select new
-                        {
-                            OrderHeader = oh,
-                            OrderTypeName = ot != null ? ot.OrderTypeName : "ไม่ระบุ"
-                        };
+            // ✅ ส่วนเดิมทั้งหมด - ไม่เปลี่ยน
+            var orderData = await _context.OrderHeaders
+            .Include(oh => oh.OrderType)      // ✅ ใช้ Include แทน Join
+            .Include(oh => oh.Discount)       // ✅ เพิ่ม Discount สำหรับ DiscountName
+            .Where(oh => oh.OrderDate == incomeDto.SaleDate && oh.OrderTypeId != 3)
+            .OrderByDescending(oh => oh.OrderTime)
+            .Select(oh => new
+            {
+                OrderHeader = oh,
+                OrderTypeName = oh.OrderType != null ? oh.OrderType.OrderTypeName : "ไม่ระบุ"
+            })
+            .ToListAsync();
 
-            var orderData = await query.ToListAsync();
-
-            // ดึง OrderDetails แยกเพื่อ performance
             var orderIds = orderData.Select(x => x.OrderHeader.OrderId).ToList();
 
             var orderDetails = await _context.OrderDetails
@@ -1093,11 +1097,31 @@ public class OrdersService : IOrdersService
                 .Where(od => orderIds.Contains(od.OrderId))
                 .ToListAsync();
 
-            // Group OrderDetails by OrderId
             var detailsLookup = orderDetails.GroupBy(od => od.OrderId)
-                                          .ToDictionary(g => g.Key, g => g.ToList());
+                                  .ToDictionary(g => g.Key, g => g.ToList());
 
-            // สร้าง DTO
+            // ✅ เปลี่ยนจาก Task.WhenAll เป็น foreach sequential
+            var discountLookup = new Dictionary<int, decimal>();
+
+            var ordersWithDiscount = orderData
+                .Where(item => item.OrderHeader.DiscountID != null && item.OrderHeader.DiscountID != 0)
+                .ToList();
+
+            foreach (var item in ordersWithDiscount)
+            {
+                try
+                {
+                    var discountAmount = await CalDiscountPrice(item.OrderHeader);
+                    discountLookup[item.OrderHeader.OrderId] = discountAmount;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, $"Error calculating discount for OrderId {item.OrderHeader.OrderId}");
+                    discountLookup[item.OrderHeader.OrderId] = 0;
+                }
+            }
+
+            // ✅ ส่วนที่เหลือเหมือนเดิม
             var incomeOrders = orderData.Select(item =>
             {
                 var oh = item.OrderHeader;
@@ -1111,6 +1135,22 @@ public class OrdersService : IOrdersService
                     return mainGrabPrice + toppingsGrabPrice;
                 });
 
+                // ✅ ใช้ discountLookup
+                decimal priceAfterDiscount = 0;
+                decimal discountAmount = discountLookup.GetValueOrDefault(oh.OrderId, 0);
+
+                string DiscountName = "";
+                if (oh.DiscountID != null && oh.DiscountID != 0)
+                {
+                    priceAfterDiscount = oh.TotalPrice - discountAmount;
+                    DiscountName = oh.Discount?.Description ?? string.Empty;
+                }
+                else
+                {
+                    priceAfterDiscount = oh.TotalPrice;
+                }
+
+                // ✅ ส่วนที่เหลือทั้งหมด - ไม่เปลี่ยน
                 var result = new IncomeOrdersDTO
                 {
                     OrderId = oh.OrderId,
@@ -1123,14 +1163,15 @@ public class OrdersService : IOrdersService
                     IsDischarge = oh.IsDischarge,
                     FinishOrderTime = oh.FinishOrderTime,
                     IsFinishOrder = oh.IsFinishOrder,
-                    TotalPrice = oh.TotalPrice,
+                    TotalPrice = priceAfterDiscount, // ✅ ใช้ priceAfterDiscount
                     TotalGrabPrice = totalGrabPrice,
                     OrderRemark = oh.OrderRemark ?? string.Empty,
                     ItemQTY = oh.ItemQTY,
-
+                    DiscountPrice = discountAmount,
+                    DiscountID = oh.DiscountID,
+                    DiscountName = DiscountName,
                     OrderDetails = details.Select(od =>
                     {
-                        // คำนวณ GrabPrice รวมของเมนูหลักและ toppings
                         var menuGrabPrice = od.Menu?.GrabPrice ?? 0;
                         var toppingsGrabPrice = od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0;
                         var totalGrabPricePerItem = menuGrabPrice + toppingsGrabPrice;
@@ -1143,10 +1184,7 @@ public class OrdersService : IOrdersService
                             MenuName = od.Menu?.Name ?? "ไม่ทราบชื่อเมนู",
                             Quantity = od.Quantity,
                             Price = od.Price,
-
-                            // GrabPrice รวม = เมนูหลัก + ท็อปปิ้งทั้งหมด (ต่อ 1 ชิ้น)
                             GrabPrice = totalGrabPricePerItem,
-
                             ToppingQTY = od.ToppingQTY,
                             MenuIdInFirestore = od.MenuIdInFirestore,
                             IsDone = od.IsDone,
@@ -1166,26 +1204,102 @@ public class OrdersService : IOrdersService
                     }).ToList()
                 };
 
-
                 return result;
             }).ToList();
 
-            _logger.LogInformation($"📋 Retrieved {incomeOrders.Count} delivery orders for {incomeDto.SaleDate}");
-
-            // Log สรุปยอดขาย
-            var totalOrders = incomeOrders.Count;
-            // var totalRevenue = incomeOrders.Sum(x => x.TotalSales);
-            // var totalGrabRevenue = incomeOrders.Sum(x => x.GPAmount);
-
-            // _logger.LogInformation($"💰 Summary for {incomeDto.SaleDate}: {totalOrders} orders, Revenue: ฿{totalRevenue:N2}, Grab Revenue: ฿{totalGrabRevenue:N2}");
+            _logger.LogInformation($"📋 Retrieved {incomeOrders.Count} income orders for {incomeDto.SaleDate}");
 
             return incomeOrders;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"❌ Error getting delivery orders for date {incomeDto.SaleDate}");
+            _logger.LogError(ex, $"❌ Error getting income orders for date {incomeDto.SaleDate}");
             throw new InvalidOperationException($"ไม่สามารถดึงข้อมูลคำสั่งซื้อสำหรับวันที่ {incomeDto.SaleDate} ได้", ex);
         }
     }
-    // ...existing code...
+    private async Task<decimal> CalDiscountPrice(OrderHeader orderHeader)
+    {
+        try
+        {
+
+            if (orderHeader.DiscountID == null || orderHeader.DiscountID == 0)
+            {
+                return 0;
+            }
+
+            decimal discountAmount = 0;
+            switch (orderHeader.DiscountID)
+            {
+                case 1:// คิดส่วนลด 10%                
+                    discountAmount = (10 / 100) * orderHeader.TotalPrice;
+                    break;
+                case 2:// คิดส่วนลด 20%
+                    discountAmount = (20 / 100) * orderHeader.TotalPrice;
+                    break;
+                case 3:// คิดส่วนลด 50%
+                    discountAmount = (50 / 100) * orderHeader.TotalPrice;
+                    break;
+                case 5:// ส่วนลดตามวงล้อ
+                    var EventRollingResults = await _context.EventRollingResults
+                        .Where(e => e.OrderFirstStoreID == orderHeader.IdInFirestore)
+                        .Include(e => e.Reward)
+                        .FirstOrDefaultAsync();
+                    switch (EventRollingResults!.RewardID)
+                    {
+                        case 1:// คิดส่วนลด 100%
+                            discountAmount = orderHeader.TotalPrice;
+                            break;
+                        case 2:// คิดส่วนลด 50%
+                            discountAmount = 0.50m * orderHeader.TotalPrice;
+                            break;
+                        case 23:// คิดส่วนลด 10%
+                            discountAmount = 0.10m * orderHeader.TotalPrice;
+                            break;
+                        default:
+                            discountAmount = EventRollingResults.Reward!.CostPrice;
+                            break;
+                    }
+                    break;
+                default:
+                    discountAmount = 0;
+                    break;
+            }
+            // ❌ ลบส่วนนี้ออก - ไม่ต้อง update database ใน read operation
+            if (discountAmount > 0)
+            {
+                await UpdateDiscountPrice(orderHeader.OrderId, discountAmount);
+            }
+
+            return Math.Round(discountAmount, 2);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"❌ Error calculating discount for OrderId {orderHeader.OrderId}");
+            return 0;
+        }
+    }
+
+    // ฟังก์ชัน update แยก
+    private async Task UpdateDiscountPrice(int orderId, decimal discountAmount)
+    {
+        try
+        {
+            var order = await _context.OrderHeaders.FindAsync(orderId);
+            if (order != null && discountAmount > 0)
+            {
+                if (order.DiscountPrice == discountAmount)
+                {
+                    // ถ้าเท่ากัน ไม่ต้องอัปเดต
+                    return;
+                }
+                order.DiscountPrice = discountAmount;
+                _context.OrderHeaders.Update(order);
+                await _context.SaveChangesAsync(); // ✅ Save ที่นี่
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"❌ Error updating discount price for OrderId {orderId}");
+        }
+    }
 }

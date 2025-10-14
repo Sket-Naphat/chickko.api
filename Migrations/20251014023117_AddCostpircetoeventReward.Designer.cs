@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using chickko.api.Data;
@@ -11,9 +12,11 @@ using chickko.api.Data;
 namespace chickko.api.Migrations
 {
     [DbContext(typeof(ChickkoContext))]
-    partial class ChickkoContextModelSnapshot : ModelSnapshot
+    [Migration("20251014023117_AddCostpircetoeventReward")]
+    partial class AddCostpircetoeventReward
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -544,9 +547,6 @@ namespace chickko.api.Migrations
 
                     b.Property<int?>("DiscountID")
                         .HasColumnType("integer");
-
-                    b.Property<decimal?>("DiscountPrice")
-                        .HasColumnType("numeric");
 
                     b.Property<TimeOnly?>("FinishOrderTime")
                         .HasColumnType("time without time zone");

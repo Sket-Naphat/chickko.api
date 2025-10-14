@@ -3,6 +3,7 @@ public class DailySaleDto
     public DateOnly? SaleDate { get; set; } = null;  // วันที่ขาย
     public int? Orders { get; set; } = null;         // จำนวนบิล
     public decimal? TotalAmount { get; set; } = null; // ยอดขายรวม
+    public decimal? TotalDiscount { get; set; } = null; // ยอดขายรวม
     public double? AvgPerOrder { get; set; } = null;  // ค่าเฉลี่ยต่อบิล
     public List<SoldMenuDto> TopSellingItems { get; set; } = new(); // รายการขายดี 5 อันดับ
     public int? totalOrders { get; set; } = null; // For total orders in the month
@@ -49,6 +50,9 @@ public class IncomeOrdersDTO
 
     //list of order details
     public List<OrderDetailDTO> OrderDetails { get; set; } = new();
+    public decimal DiscountPrice { get; set; } = 0; // Price reduced by discount
+    public int? DiscountID { get; set; } = 0; // Foreign Key
+    public string? DiscountName { get; set; } = string.Empty; // Navigation Property for Discount
 
 }
 //รายการเมนูที่ขายได้

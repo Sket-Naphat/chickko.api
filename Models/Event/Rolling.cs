@@ -9,6 +9,8 @@ namespace chickko.api.Dtos.Event
         public string? RewardName { get; set; } = "";
         public string? Description { get; set; } = "";
         public decimal Probability { get; set; }
+        public int CostPrice { get; set; } = 0;
+        public bool Active { get; set; } = true;
     }
 
     public class EventRollingResult

@@ -33,6 +33,7 @@ namespace chickko.api.Models
         public string OrderRemark { get; set; } = string.Empty;
         public int? DiscountID { get; set; } = 0; // Foreign Key
         public Discount? Discount { get; set; } // Navigation Property for Discount
+        public decimal? DiscountPrice { get; set; } = 0; // Price reduced by discount
         public string? IdInFirestore { get; set; } // Optional field to store Firestore ID
         public int? TableID { get; set; } // Optional field for table number
         public Table? Table { get; set; } // Navigation Property for Table
