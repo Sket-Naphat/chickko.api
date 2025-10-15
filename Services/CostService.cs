@@ -322,7 +322,7 @@ namespace chickko.api.Services
                     }
 
                     // ขั้นตอนที่ 3: แปลงและตรวจสอบรูปแบบวันที่
-                    
+
                     // ✅ แปลง WorkDate (ต้องมี) - เปลี่ยนจาก StartDate เป็น WorkDate
                     if (string.IsNullOrEmpty(item.WorkDate))
                     {
@@ -346,8 +346,8 @@ namespace chickko.api.Services
                     {
                         CostCategoryID = 2, // หมวดหมู่ค่าแรง (Wage category)
                         CostPrice = item.WageCost, // จำนวนเงินค่าแรงของวันนี้
-                        CostDescription = !string.IsNullOrEmpty(item.Remark) 
-                            ? item.Remark 
+                        CostDescription = !string.IsNullOrEmpty(item.Remark)
+                            ? item.Remark
                             : $"ค่าแรงพนักงาน ID: {item.EmployeeID} วันที่: {item.WorkDate}",
                         CostDate = workDate, // ✅ ใช้ WorkDate เป็น CostDate
                         CostTime = _utilService.GetThailandTime(), // เวลาที่สร้างรายการ
@@ -372,13 +372,13 @@ namespace chickko.api.Services
                     _logger.LogInformation($"💰 Created Cost ID: {createdCost.CostId} for Employee {item.EmployeeID} WorkDate: {item.WorkDate} | Amount: {item.WageCost}");
 
                     // ขั้นตอนที่ 5: ค้นหาและอัปเดตข้อมูลการทำงาน (Update Worktime Records)
-                    
+
                     // ✅ ค้นหา Worktime สำหรับวันที่และพนักงานที่ระบุ
                     var worktime = await _context.Worktime
                         .Include(w => w.Employee)
-                        .FirstOrDefaultAsync(w => w.WorkDate == workDate 
-                                               && w.EmployeeID == item.EmployeeID 
-                                               && w.Employee != null 
+                        .FirstOrDefaultAsync(w => w.WorkDate == workDate
+                                               && w.EmployeeID == item.EmployeeID
+                                               && w.Employee != null
                                                && w.Employee.UserPermistionID != 1); // ไม่รวมเจ้าของ (Owner)
 
                     if (worktime == null)
@@ -410,7 +410,7 @@ namespace chickko.api.Services
                 _logger.LogInformation($"📊 Processed {updateWageCostDto.Count} items");
                 _logger.LogInformation($"💰 Created {createdCosts.Count} cost records");
                 _logger.LogInformation($"🔄 Updated {updatedWorktimes.Count} worktime records");
-                
+
                 // แสดงรายละเอียดแต่ละ Cost ที่สร้าง
                 for (int i = 0; i < createdCosts.Count; i++)
                 {
@@ -486,6 +486,11 @@ namespace chickko.api.Services
                         IsPurchase = c.IsPurchase,
                         CostStatusID = c.CostStatusID,
                         CostStatus = c.CostStatus,
+                        CreateDate = c.CreateDate,
+                        CreateTime = c.CreateTime,
+                        PurchaseDate = c.PurchaseDate,
+                        PurchaseTime = c.PurchaseTime,
+                        UpdateBy = c.UpdateBy
                     };
 
                     // ✅ เงื่อนไขพิเศษสำหรับ CostCategoryID = 1 // Stock Cost
