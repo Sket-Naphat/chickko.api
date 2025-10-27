@@ -61,8 +61,8 @@ namespace chickko.api.Services
             }
             cost.CostDate = costDate;
             cost.UpdateBy = UpdateBy;
-            cost.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
-            cost.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+            cost.UpdateDate = _utilService.GetThailandDate();
+            cost.UpdateTime = _utilService.GetThailandTime();
             await _context.SaveChangesAsync();
         }
         public async Task UpdatePurchaseCost(Cost cost)
@@ -79,8 +79,8 @@ namespace chickko.api.Services
                     existingCost.PurchaseDate = cost.PurchaseDate;
                     existingCost.PurchaseTime = cost.PurchaseTime;
                     existingCost.CostStatusID = cost.CostStatusID;
-                    existingCost.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
-                    existingCost.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                    existingCost.UpdateDate = _utilService.GetThailandDate();
+                    existingCost.UpdateTime = _utilService.GetThailandTime();
                     existingCost.UpdateBy = cost.UpdateBy;
                     await _context.SaveChangesAsync();
                 }
