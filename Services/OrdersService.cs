@@ -17,19 +17,21 @@ public class OrdersService : IOrdersService
     private readonly ChickkoContext _context;
     private readonly ILogger<OrdersService> _logger;
     private readonly IMenuService _menuService;
-
     private readonly IUtilService _utilService;
+    private readonly IDateTimeService _dateTimeService; // ✅ เพิ่ม service
 
     public OrdersService(
         ChickkoContext context,
         ILogger<OrdersService> logger,
         IMenuService menuService,
-        IUtilService utilService)
+        IUtilService utilService,
+        IDateTimeService dateTimeService) // ✅ inject service
     {
         _context = context;
         _logger = logger;
         _menuService = menuService;
         _utilService = utilService;
+        _dateTimeService = dateTimeService; // ✅ assign service
     }
 
     // ✅ คุณต้องเขียนเองให้เชื่อมกับ Firestore SDK
@@ -111,8 +113,10 @@ public class OrdersService : IOrdersService
                     var order = new OrderHeader
                     {
                         CustomerName = data["customerName"]?.ToString() ?? "ไม่ระบุชื้อ : " + data["orderDate"]?.ToString(),
-                        OrderDate = DateOnly.TryParseExact(data["orderDate"]?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) ? orderDate : DateOnly.FromDateTime(DateTime.Now),
-                        OrderTime = TimeOnly.TryParse(data["orderTime"]?.ToString(), out var orderTime) ? orderTime : TimeOnly.FromDateTime(DateTime.Now),
+                        OrderDate = DateOnly.TryParseExact(data["orderDate"]?.ToString(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var orderDate) 
+                            ? orderDate : _dateTimeService.Today, // ✅ ใช้ Thai date
+                        OrderTime = TimeOnly.TryParse(data["orderTime"]?.ToString(), out var orderTime) 
+                            ? orderTime : _dateTimeService.TimeNow, // ✅ ใช้ Thai time
                         OrderTypeId = _OrderType?.OrderTypeId ?? 0,
                         OrderType = _OrderType ?? new Ordertype(),
                         DischargeTypeId = _DischargeType?.DischargeTypeId ?? 0,
@@ -866,8 +870,8 @@ public class OrdersService : IOrdersService
                 existingRecord.NetSales = deliveryDto.NetSales;
                 existingRecord.GPPercent = deliveryDto.GPPercent;
                 existingRecord.GPAmount = deliveryDto.GPAmount;
-                existingRecord.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
-                existingRecord.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                existingRecord.UpdateDate = _dateTimeService.Today; // ✅ ใช้ Thai date
+                existingRecord.UpdateTime = _dateTimeService.TimeNow; // ✅ ใช้ Thai time
                 existingRecord.UpdatedBy = deliveryDto.UpdatedBy;
                 existingRecord.Active = true;
 

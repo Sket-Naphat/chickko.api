@@ -32,8 +32,7 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<ICostService, CostService>();
 builder.Services.AddScoped<IWorktimeService, WorktimeService>();
 builder.Services.AddScoped<IEventRollingService, chickko.api.Services.Event.EventRollingService>();
-
-
+builder.Services.AddScoped<IDateTimeService, DateTimeService>(); // เพิ่ม IDateTimeService
 
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication("Bearer")
@@ -149,3 +148,20 @@ app.MapGet("/health/firebase", async (IUtilService utilService) =>
 });
 
 app.Run();
+
+// ✅ สร้าง Utility Service
+public class DateTimeService : IDateTimeService
+{
+    private static readonly TimeZoneInfo ThaiTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+
+    public DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ThaiTimeZone);
+    public DateOnly Today => DateOnly.FromDateTime(Now);
+    public TimeOnly TimeNow => TimeOnly.FromDateTime(Now);
+}
+
+public interface IDateTimeService
+{
+    DateTime Now { get; }
+    DateOnly Today { get; }
+    TimeOnly TimeNow { get; }
+}
