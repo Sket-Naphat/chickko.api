@@ -456,8 +456,8 @@ namespace chickko.api.Services
                     StockInQTY = stockDto.StockInQTY,
                     Remark = "",
                     Active = true,
-                    UpdateDate = DateOnly.FromDateTime(DateTime.Now),
-                    UpdateTime = TimeOnly.FromDateTime(DateTime.Now)
+                    UpdateDate = _utilService.GetThailandDate(),
+                    UpdateTime = _utilService.GetThailandTime()
                 };
 
                 _context.Stocks.Add(newStock);

@@ -866,8 +866,8 @@ public class OrdersService : IOrdersService
                 existingRecord.NetSales = deliveryDto.NetSales;
                 existingRecord.GPPercent = deliveryDto.GPPercent;
                 existingRecord.GPAmount = deliveryDto.GPAmount;
-                existingRecord.UpdateDate = DateOnly.FromDateTime(System.DateTime.Now);
-                existingRecord.UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                existingRecord.UpdateDate = _utilService.GetThailandDate();
+                existingRecord.UpdateTime = _utilService.GetThailandTime();
                 existingRecord.UpdatedBy = deliveryDto.UpdatedBy;
                 existingRecord.Active = true;
 
@@ -885,8 +885,8 @@ public class OrdersService : IOrdersService
                     NetSales = deliveryDto.NetSales,
                     GPPercent = deliveryDto.GPPercent,
                     GPAmount = deliveryDto.GPAmount,
-                    UpdateDate = DateOnly.FromDateTime(System.DateTime.Now),
-                    UpdateTime = TimeOnly.FromDateTime(System.DateTime.Now),
+                    UpdateDate = _utilService.GetThailandDate(),
+                    UpdateTime = _utilService.GetThailandTime(),
                     UpdatedBy = deliveryDto.UpdatedBy,
                     Active = true
                 };

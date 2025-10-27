@@ -109,19 +109,19 @@ namespace chickko.api.controller
                     CostCategoryID = costDto.CostCategoryID,
                     CostPrice = costDto.CostPrice,
                     CostDescription = costDto.CostDescription,
-                    CostDate = costDto.CostDate ?? DateOnly.FromDateTime(System.DateTime.Now),
-                    CostTime = costDto.CostTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
+                    CostDate = costDto.CostDate ?? _utilService.GetThailandDate(),
+                    CostTime = costDto.CostTime ?? _utilService.GetThailandTime(),
                     IsPurchase = costDto.IsPurchase,
                     CostStatusID = costDto.CostStatusID == null ? (costDto.IsPurchase ? 3 : 2) : costDto.CostStatusID, //ถ้าไม่มีค่า CostStatusID ให้ใช้ค่า IsPurchase แทน
                     CreateBy = costDto.UpdateBy ?? 0,
-                    CreateDate = costDto.CreateDate ?? DateOnly.FromDateTime(System.DateTime.Now),
-                    CreateTime = costDto.CreateTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
+                    CreateDate = costDto.CreateDate ?? _utilService.GetThailandDate(),
+                    CreateTime = costDto.CreateTime ?? _utilService.GetThailandTime(),
                     IsActive = true
                 };
                 if (costDto.IsPurchase)
                 {
-                    _cost.PurchaseDate = costDto.PurchaseDate ?? DateOnly.FromDateTime(System.DateTime.Now);
-                    _cost.PurchaseTime = costDto.PurchaseTime ?? TimeOnly.FromDateTime(System.DateTime.Now);
+                    _cost.PurchaseDate = costDto.PurchaseDate ?? _utilService.GetThailandDate();
+                    _cost.PurchaseTime = costDto.PurchaseTime ?? _utilService.GetThailandTime();
                 }
                 await _costService.CreateCost(_cost);
                 return Ok();
@@ -149,12 +149,12 @@ namespace chickko.api.controller
                     CostPrice = costDto.CostPrice,
                     CostDescription = costDto.CostDescription,
                     IsPurchase = costDto.IsPurchase,
-                    PurchaseDate = costDto.PurchaseDate ?? DateOnly.FromDateTime(System.DateTime.Now),
-                    PurchaseTime = costDto.PurchaseTime ?? TimeOnly.FromDateTime(System.DateTime.Now),
+                    PurchaseDate = costDto.PurchaseDate ?? _utilService.GetThailandDate(),
+                    PurchaseTime = costDto.PurchaseTime ?? _utilService.GetThailandTime(),
                     CostStatusID = costDto.CostStatusID == null ? (costDto.IsPurchase ? 3 : 2) : costDto.CostStatusID, //ถ้าไม่มีค่า CostStatusID ให้ใช้ค่า IsPurchase แทน
                     UpdateBy = costDto.UpdateBy ?? 0, // ถ้า UpdateBy เป็น null ให้ใช้ค่า 0
-                    UpdateDate = costDto.UpdateDate ?? DateOnly.FromDateTime(System.DateTime.Now),
-                    UpdateTime = costDto.UpdateTime ?? TimeOnly.FromDateTime(System.DateTime.Now)
+                    UpdateDate = costDto.UpdateDate ?? _utilService.GetThailandDate(),
+                    UpdateTime = costDto.UpdateTime ?? _utilService.GetThailandTime()
                 };
                 await _costService.UpdatePurchaseCost(_cost);
                 return Ok();

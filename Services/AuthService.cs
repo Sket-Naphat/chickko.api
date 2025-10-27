@@ -16,12 +16,14 @@ namespace chickko.api.Services
         private readonly ChickkoContext _context;
         private readonly ISiteService _siteService; // ใช้ดึง site ปัจจุบันจาก Header/Claim
         private readonly PasswordHasher<User> _passwordHasher = new PasswordHasher<User>();
+        private readonly IUtilService _utilService;
 
-        public AuthService(IConfiguration config, ChickkoContext context, ISiteService siteService)
+        public AuthService(IConfiguration config, ChickkoContext context, ISiteService siteService, IUtilService utilService)
         {
             _config = config;
             _context = context;          // context นี้ถูกสร้างด้วย connection string ตาม site แล้ว (Program.cs)
             _siteService = siteService;
+            _utilService = utilService;
         }
 
         // ================== ฟังก์ชันหลักที่ใช้ (ใหม่) ===================
@@ -56,8 +58,8 @@ namespace chickko.api.Services
                     var loginLog = new LoginLog
                     {
                         UserId = user.UserId,
-                        LoginDate = DateOnly.FromDateTime(System.DateTime.Now),
-                        LoginTime = TimeOnly.FromDateTime(System.DateTime.Now)
+                        LoginDate = _utilService.GetThailandDate(),
+                        LoginTime = _utilService.GetThailandTime()
                     };
                     await InsertLoginLog(loginLog);
                 }

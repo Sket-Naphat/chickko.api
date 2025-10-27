@@ -219,8 +219,8 @@ namespace chickko.api.Services
                     if (IsPurchase)
                     {
                         _cost.IsPurchase = IsPurchase;
-                        _cost.PurchaseDate = DateOnly.FromDateTime(System.DateTime.Now);
-                        _cost.PurchaseTime = TimeOnly.FromDateTime(System.DateTime.Now);
+                        _cost.PurchaseDate = _utilService.GetThailandDate();
+                        _cost.PurchaseTime = _utilService.GetThailandTime();
                         _cost.CostStatusID = 3; //จ่ายเงินแล้ว
                     }
                     else
