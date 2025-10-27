@@ -152,38 +152,15 @@ app.Run();
 // ✅ แทนที่ DateTimeService เดิม
 public class DateTimeService : IDateTimeService
 {
-    private static readonly TimeZoneInfo ThaiTimeZone = GetThaiTimeZone();
+    // ✅ สร้าง Custom TimeZone UTC+7 เอง
+    private static readonly TimeZoneInfo BangkokTimeZone = TimeZoneInfo.CreateCustomTimeZone(
+        "Bangkok Standard Time",
+        TimeSpan.FromHours(7),  // ✅ ชัดเจน UTC+7
+        "Bangkok Standard Time",
+        "BST"
+    );
 
-    private static TimeZoneInfo GetThaiTimeZone()
-    {
-        // ลองหา TimeZone ตามลำดับความน่าจะเป็น
-        var timeZoneIds = new[]
-        {
-            "Asia/Bangkok",           // Linux/Docker (Railway, DigitalOcean, AWS)
-            "SE Asia Standard Time",  // Windows (Local development)
-        };
-
-        foreach (var timeZoneId in timeZoneIds)
-        {
-            try
-            {
-                return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-            }
-            catch (TimeZoneNotFoundException)
-            {
-                continue;
-            }
-        }
-
-        // Fallback เป็น UTC+7
-        return TimeZoneInfo.CreateCustomTimeZone(
-            "Thai Standard Time",
-            TimeSpan.FromHours(7),
-            "Thai Standard Time",
-            "Thai Standard Time");
-    }
-
-    public DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ThaiTimeZone);
+    public DateTime Now => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, BangkokTimeZone);
     public DateOnly Today => DateOnly.FromDateTime(Now);
     public TimeOnly TimeNow => TimeOnly.FromDateTime(Now);
 }
