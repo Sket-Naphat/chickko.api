@@ -449,45 +449,36 @@ public class OrdersService : IOrdersService
                 .Include(oh => oh.DischargeType)
                 .Where(oh => oh.OrderTypeId != 3);   // กรองยอดขายหน้าร้าน (ไม่ใช่เดลิเวอรี่)
 
+            var orderDetailsQuery = _context.OrderDetails
+                .Include(od => od.Menu)
+                .Include(od => od.OrderHeader)
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3
+                && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
+
             // ✅ แก้ไขการกรองปี/เดือน - ใช้ .Year/.Month property ของ DateOnly
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
             {
                 query = query.Where(c => c.OrderDate.HasValue &&
                     c.OrderDate.Value.Year == saleDateDto.Year.Value &&
                     c.OrderDate.Value.Month == saleDateDto.Month.Value);
-            }
-            else if (saleDateDto.Year.HasValue)
-            {
-                query = query.Where(c => c.OrderDate.HasValue &&
-                    c.OrderDate.Value.Year == saleDateDto.Year.Value);
-            }
-            else if (saleDateDto.Month.HasValue)
-            {
-                query = query.Where(c => c.OrderDate.HasValue &&
-                    c.OrderDate.Value.Month == saleDateDto.Month.Value);
-            }
 
-            // ✅ Query ครั้งเดียวเพื่อหา order details สำหรับ TopSellingItems
-            var orderDetailsQuery = _context.OrderDetails
-                .Include(od => od.Menu)
-                .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3
-                          && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
-
-            // Apply same filtering as main query for order details
-            if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
-            {
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
                     od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value &&
                     od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
             else if (saleDateDto.Year.HasValue)
             {
+                query = query.Where(c => c.OrderDate.HasValue &&
+                    c.OrderDate.Value.Year == saleDateDto.Year.Value);
+
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
                     od.OrderHeader.OrderDate.Value.Year == saleDateDto.Year.Value);
             }
             else if (saleDateDto.Month.HasValue)
             {
+                query = query.Where(c => c.OrderDate.HasValue &&
+                    c.OrderDate.Value.Month == saleDateDto.Month.Value);
+
                 orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue &&
                     od.OrderHeader.OrderDate.Value.Month == saleDateDto.Month.Value);
             }
@@ -602,7 +593,7 @@ public class OrdersService : IOrdersService
                                 menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
                         })
                         .OrderByDescending(x => x.QuantitySold)
-                        .Take(5)
+                        //.Take(5)
                         .ToList()
                 );
 
@@ -787,7 +778,7 @@ public class OrdersService : IOrdersService
                                 menuGroup.Sum(od => od.Price * od.Quantity) * 100) : 0
                         })
                         .OrderByDescending(x => x.QuantitySold)
-                        .Take(5) // ✅ เอา 5 รายการแรกที่ขายดีที่สุด
+                        //.Take(5) // ✅ เอา 5 รายการแรกที่ขายดีที่สุด
                         .ToList()
                 );
 
