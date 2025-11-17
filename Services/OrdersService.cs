@@ -452,8 +452,8 @@ public class OrdersService : IOrdersService
             var orderDetailsQuery = _context.OrderDetails
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
-                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3
-                && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
+                .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId != 3);
+            // && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
 
             // ✅ แก้ไขการกรองปี/เดือน - ใช้ .Year/.Month property ของ DateOnly
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
@@ -1291,6 +1291,86 @@ public class OrdersService : IOrdersService
         catch (Exception ex)
         {
             _logger.LogError(ex, $"❌ Error updating discount price for OrderId {orderId}");
+        }
+    }
+    public async Task<List<CategorySaleDto>> GetSaleOfMenu(int year, int month)
+    {
+        try
+        {
+            // ✅ 1. ดึงเมนูที่ Active ทั้งหมด
+            var activeMenus = await _context.Menus
+                .Where(m => m.Active == true)
+                .Include(m => m.Category)
+                .ToListAsync();
+
+            // ✅ 2. สร้าง query พื้นฐาน
+            var baseQuery = _context.OrderDetails
+                .Include(od => od.OrderHeader)
+                .Where(od => od.OrderHeader != null
+                    && od.OrderHeader.OrderDate.HasValue
+                    && od.OrderHeader.OrderDate.Value.Year == year);
+
+            // ✅ 3. เพิ่มเงื่อนไขเดือน (ถ้ามี)
+            if (month > 0)
+            {
+                baseQuery = baseQuery.Where(od => od.OrderHeader.OrderDate.HasValue && od.OrderHeader.OrderDate.Value.Month == month);
+            }
+
+            // ✅ 4. ดึงข้อมูลการขายหน้าร้าน (ไม่รวม delivery)
+            var dineInSales = await baseQuery
+                .Where(od => od.OrderHeader.OrderTypeId != 3) // หน้าร้าน
+                .GroupBy(od => od.MenuId)
+                .Select(g => new { MenuId = g.Key, Qty = g.Sum(x => x.Quantity) })
+                .ToDictionaryAsync(x => x.MenuId, x => x.Qty);
+
+            // ✅ 5. ดึงข้อมูลการขาย Delivery
+            var deliverySales = await baseQuery
+                .Where(od => od.OrderHeader.OrderTypeId == 3) // delivery
+                .GroupBy(od => od.MenuId)
+                .Select(g => new { MenuId = g.Key, Qty = g.Sum(x => x.Quantity) })
+                .ToDictionaryAsync(x => x.MenuId, x => x.Qty);
+
+            // ✅ 6. สร้าง list เมนูพร้อมจำนวนขาย
+            var menuSales = activeMenus.Select(menu => new MenuSaleSimpleDto
+            {
+                MenuId = menu.Id,
+                MenuName = menu.Name,
+                CategoryId = menu.CategoryId ?? 0,
+                CategoryName = menu.Category?.CategoryName ?? "ไม่ระบุ",
+                DineInQty = dineInSales.GetValueOrDefault(menu.Id, 0),
+                DeliveryQty = deliverySales.GetValueOrDefault(menu.Id, 0),
+                TotalQty = dineInSales.GetValueOrDefault(menu.Id, 0) +
+                          deliverySales.GetValueOrDefault(menu.Id, 0)
+            })
+            .OrderByDescending(x => x.TotalQty)
+            .ToList();
+
+            // ✅ 7. แบ่งกลุ่มตาม Category
+            var categories = menuSales
+                .GroupBy(m => new { m.CategoryId, m.CategoryName })
+                .Select(g => new CategorySaleDto
+                {
+                    CategoryId = g.Key.CategoryId,
+                    CategoryName = g.Key.CategoryName,
+                    Menus = g.ToList()
+                })
+                .OrderBy(x => x.CategoryName)
+                .ToList();
+
+            // ✅ 8. Log ที่ปรับปรุง
+            var period = month > 0 
+                ? $"{year}/{month:D2}" 
+                : $"{year} (ทั้งปี)";
+        
+            _logger.LogInformation($"📊 GetSaleOfMenu: {period} | {menuSales.Count} menus in {categories.Count} categories");
+
+            return categories;
+        }
+        catch (Exception ex)
+        {
+            var period = month > 0 ? $"{year}/{month:D2}" : $"{year}";
+            _logger.LogError(ex, $"❌ Error: {period}");
+            return new List<CategorySaleDto>();
         }
     }
 }

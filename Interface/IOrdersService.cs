@@ -13,5 +13,6 @@ namespace chickko.api.Interface
         Task<List<DeliveryDto>> GetDeliveryRecords(DeliveryDto deliveryDto);
         Task<List<DeliveryOrdersDTO>> GetDeliveryOrdersByDate(DeliveryDto deliveryDto);
         Task<List<IncomeOrdersDTO>> GetIncomeOrdersByDate(IncomeDto incomeDto);
+        Task<List<CategorySaleDto>> GetSaleOfMenu(int year, int month);
     }
 }

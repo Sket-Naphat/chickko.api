@@ -13,11 +13,13 @@ namespace chickko.api.Controllers
     {
         private readonly IOrdersService _ordersService;
         private readonly IMenuService _menusService;
+        private readonly ICostService _costService;
 
-        public OrdersController(IOrdersService ordersService, IMenuService menusService)
+        public OrdersController(IOrdersService ordersService, IMenuService menusService, ICostService costService)
         {
             _ordersService = ordersService;
             _menusService = menusService;
+            _costService = costService;
         }
         [HttpPost("CopyOrderFromFirestore")]
 
@@ -61,6 +63,37 @@ namespace chickko.api.Controllers
                 data = result
             });
         }
+        [HttpPost("GetDailyReport")]
+        public async Task<IActionResult> GetDailyReport(SaleDateDto saleDateDto)
+        {
+            var dineInResult = await _ordersService.GetDailyDineInSalesReport(saleDateDto);
+            var deliveryResult = await _ordersService.GetDailyDeliverySalesReport(saleDateDto);
+            var GetSaleOfMenu = await _ordersService.GetSaleOfMenu(saleDateDto.Year ?? 0, saleDateDto.Month ?? 0);
+
+            GetCostListDto getCostListDto = new GetCostListDto
+            {
+                Month = saleDateDto.Month,
+                Year = saleDateDto.Year,
+                IsPurchase = saleDateDto.IsPurchase
+            };
+            var dailyCostReportDto = await  _costService.GetCostListReport(getCostListDto);
+
+            DashboardDto dashboardDto = new DashboardDto
+            {
+                Year = saleDateDto.Year ?? 0,
+                Month = saleDateDto.Month ?? 0,
+                GetSaleOfMenu = GetSaleOfMenu,
+                DailyDineInSalesReport = dineInResult,
+                DailyDeliverySalesReport = deliveryResult,
+                DailyCostReport = dailyCostReportDto
+            };
+            return Ok(new
+            {
+                success = true,
+                data = dashboardDto
+            });
+        }
+
         [HttpPost("UpdateDeliveryRecords")]
         public async Task<IActionResult> UpdateDeliveryRecords(DeliveryDto deliveryDto)
         {

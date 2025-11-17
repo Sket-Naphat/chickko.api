@@ -53,6 +53,7 @@ namespace chickko.api.Dtos
         public TimeOnly? SaleTime { get; set; } = null!;
         public int? Month { get; set; } = null; // เดือน
         public int? Year { get; set; } = null; // ปี
+        public bool? IsPurchase { get; set; } = null; // ใช้เพื่อบอกว่าต้นทุนนี้ถูกใช้ในการซื้อหรือไม่
     }
     public class DailyCostReportDto
     {

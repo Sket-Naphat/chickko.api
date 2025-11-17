@@ -1,3 +1,5 @@
+using chickko.api.Dtos;
+
 public class DailySaleDto
 {
     public DateOnly? SaleDate { get; set; } = null;  // วันที่ขาย
@@ -65,4 +67,32 @@ public class SoldMenuDto
     public decimal? TotalCost { get; set; } = 0;
     public decimal? TotalProfit { get; set; } = 0;
     public double? ProfitMargin { get; set; } = 0;
+}
+
+public class CategorySaleDto
+{
+    public int CategoryId { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public List<MenuSaleSimpleDto> Menus { get; set; } = new();
+}
+
+public class MenuSaleSimpleDto
+{
+    public int MenuId { get; set; }
+    public string MenuName { get; set; } = string.Empty;
+    public int CategoryId { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public int DineInQty { get; set; }
+    public int DeliveryQty { get; set; }
+    public int TotalQty { get; set; }
+}
+
+public class DashboardDto
+{
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public List<DailySaleDto> DailyDineInSalesReport { get; set; } = new();
+    public List<DailySaleDto> DailyDeliverySalesReport { get; set; } = new();
+    public List<CategorySaleDto> GetSaleOfMenu { get; set; } = new();
+    public List<DailyCostReportDto> DailyCostReport { get; set; } = new();
 }
