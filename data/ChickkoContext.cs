@@ -39,6 +39,9 @@ namespace chickko.api.Data
         public DbSet<StockUnitCostHistory> StockUnitCostHistory { get; set; } = null!;
         public DbSet<Delivery> Deliveries { get; set; } = null!;
         public DbSet<LoginLog> LoginLogs { get; set; } = null!;
+        public DbSet<Statement> Statements { get; set; } = null!;
+        public DbSet<Income> Incomes { get; set; } = null!;
+        public DbSet<IncomeType> IncomeTypes { get; set; } = null!;
 
         // event models
         public DbSet<EventRollingReward> EventRollingRewards { get; set; } = null!;

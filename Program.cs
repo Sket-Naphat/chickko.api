@@ -32,7 +32,7 @@ builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<ICostService, CostService>();
 builder.Services.AddScoped<IWorktimeService, WorktimeService>();
 builder.Services.AddScoped<IEventRollingService, chickko.api.Services.Event.EventRollingService>();
-
+builder.Services.AddScoped<IStatementService, StatementService>();
 
 
 builder.Services.AddAuthorization();

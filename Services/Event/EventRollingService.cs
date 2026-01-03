@@ -16,7 +16,9 @@ namespace chickko.api.Services.Event
 
         public async Task<List<RollingRewardDto>> GetRollingRewardList()
         {
-            var rewardList = await _context.EventRollingRewards.ToListAsync();
+            var rewardList = await _context.EventRollingRewards
+                .Where(r => r.Active == true)
+                .ToListAsync();
             var dtoList = rewardList.Select(r => new RollingRewardDto
             {
                 RollingRewardId = r.RollingRewardId,
