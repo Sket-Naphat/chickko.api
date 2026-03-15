@@ -8,5 +8,8 @@ namespace chickko.api.Interface
         Task InsertIncomeAsync(IncomeStatementDto incomeStatementDto);
         Task InsertStatementAsync(StatementDto statementDto);
         Task<List<IncomeType>> GetIncomeTypesAsync();
+        Task<List<IncomeStatementDto>> GetIncomeAsync(DateOnly? dateFrom, DateOnly? dateTo);
+        Task UpdateIncomeAsync(IncomeStatementDto incomeStatementDto);
+        Task DeleteIncomeAsync(int incomeId);
     }
 }

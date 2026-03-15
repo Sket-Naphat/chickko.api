@@ -19,6 +19,7 @@ namespace chickko.api.Dtos
         public TimeOnly IncomeTime { get; set; }
         public decimal IncomeValue { get; set; }
         public int IncomeTypeId { get; set; }
+        public string IncomeTypeName { get; set; } = string.Empty;
         public string IncomeDescription { get; set; } = string.Empty;
         public int UserId { get; set; }
         public DateOnly? UpdateDate { get; set; }
