@@ -37,17 +37,17 @@ namespace chickko.api.Services
                 // ดึงผู้ใช้จาก DB (ซึ่งคือ DB ของ site ปัจจุบัน)
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
                 if (user == null)
-                    return new { success = false, message = "Invalid username or password" };
+                    return new { success = false, message = "Invalid username or password: user not found" };
 
                 var verifyResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
                 if (verifyResult == PasswordVerificationResult.Failed)
-                    return new { success = false, message = "Invalid username or password" };
+                    return new { success = false, message = "Invalid username or password: password incorrect" };
 
                 // (ออปชัน) บังคับว่าผู้ใช้ต้องอยู่ site เดียวกับ header
                 // ถ้าไม่ต้องการเช็คให้ลบ if นี้
                 if (!string.Equals(user.Site, currentSite, StringComparison.OrdinalIgnoreCase))
                 {
-                    return new { success = false, message = "User not allowed for this site" };
+                    return new { success = false, message = $"User not allowed for this site: user.Site={user.Site}, currentSite={currentSite}" };
                 }
 
                 var token = GenerateJwtToken(user, currentSite);
@@ -79,7 +79,13 @@ namespace chickko.api.Services
             }
             catch (Exception ex)
             {
-                return new { success = false, message = "An error occurred during login.", error = ex.Message };
+                var errorMsg = $"An error occurred during login: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    errorMsg += $" | Inner: {ex.InnerException.Message}";
+                }
+                // Log errorMsg, ex.StackTrace, ex.InnerException?.StackTrace
+                return new { success = false, message = errorMsg, error = ex.ToString() };
             }
         }
 
