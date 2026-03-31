@@ -32,6 +32,18 @@ namespace chickko.api.controller
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [HttpGet("GetCostPurchaseTypeList")]
+        public async Task<IActionResult> GetCostPurchaseTypeList(){
+            try
+            {
+                var result = await _costService.GetCostPurchaseTypeList();
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
         [HttpPost("GetAllCostList")]
         public async Task<IActionResult> GetAllCostList(GetCostListDto getCostListDto)
         {
@@ -116,6 +128,7 @@ namespace chickko.api.controller
                     CreateBy = costDto.UpdateBy ?? 0,
                     CreateDate = costDto.CreateDate ?? _utilService.GetThailandDate(),
                     CreateTime = costDto.CreateTime ?? _utilService.GetThailandTime(),
+                    CostPurchaseTypeID = costDto.CostPurchaseTypeID,
                     IsActive = true
                 };
                 if (costDto.IsPurchase)
@@ -148,6 +161,7 @@ namespace chickko.api.controller
                     CostCategoryID = costDto.CostCategoryID,
                     CostPrice = costDto.CostPrice,
                     CostDescription = costDto.CostDescription,
+                    CostPurchaseTypeID = costDto.CostPurchaseTypeID,
                     IsPurchase = costDto.IsPurchase,
                     PurchaseDate = costDto.PurchaseDate ?? _utilService.GetThailandDate(),
                     PurchaseTime = costDto.PurchaseTime ?? _utilService.GetThailandTime(),

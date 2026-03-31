@@ -13,6 +13,7 @@ namespace chickko.api.Interface
         Task<Cost> CreateCostReturnCostID(Cost cost);
         Task UpdateWageCost(List<UpdateWageCostDto> updateWageCostDto);
         Task<List<CostCategory>> GetCostCategoryList();
+        Task<List<CostPurchaseType>> GetCostPurchaseTypeList();
         Task UpdatePurchaseCost(Cost cost);
         Task UpdateStockCostDate(DateOnly costDate, int costId, int UpdateBy);
         Task<string> DeleteCost(int costId);

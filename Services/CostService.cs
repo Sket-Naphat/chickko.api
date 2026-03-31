@@ -45,6 +45,18 @@ namespace chickko.api.Services
                 throw;
             }
         }
+        public async Task<List<CostPurchaseType>> GetCostPurchaseTypeList()
+        {
+            try
+            {
+                return await _context.CostPurchaseType.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการดึงรายการประเภทการซื้อ");
+                throw;
+            }
+        }
 
         public async Task<Cost> CreateCostReturnCostID(Cost cost)
         {
