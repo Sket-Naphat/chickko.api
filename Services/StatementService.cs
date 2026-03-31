@@ -12,11 +12,22 @@ namespace chickko.api.Services
         private readonly ChickkoContext _context;
         private readonly ILogger<StatementService> _logger;
         private readonly IUtilService _utilService;
-        public StatementService(ChickkoContext context, ILogger<StatementService> logger, IUtilService utilService)
+        private readonly IOrdersService _ordersService;
+        private readonly ICostService _costService; // เพิ่มฟิลด์สำหรับ ICostService
+
+        public StatementService(
+            ChickkoContext context,
+            ILogger<StatementService> logger,
+            IUtilService utilService,
+            IOrdersService ordersService, // เพิ่ม DI IOrdersService
+            ICostService costService // เพิ่ม DI ICostService
+        )
         {
             _context = context;
             _logger = logger;
             _utilService = utilService;
+            _ordersService = ordersService; // กำหนดให้ field
+            _costService = costService; // กำหนดให้ field
         }
 
 
@@ -179,6 +190,52 @@ namespace chickko.api.Services
                 _logger.LogError(ex, "Error deleting income");
                 throw;
             }
+        }
+        public async Task<decimal> GetStatementStartValueAsync(DateOnly date)
+        {
+            try
+            {
+                var lastStatement = await _context.Statements
+                    .Where(s => s.StatementDate <= date)
+                    .OrderByDescending(s => s.StatementDate)
+                    .ThenByDescending(s => s.StatementTime)
+                    .FirstOrDefaultAsync();
+
+                return lastStatement?.StatementValue ?? 0m;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving statement start value");
+                throw;
+            }
+        }
+
+        public async Task<DailyReportSummaryDto> GetStatementSummaryAsync(SaleDateDto saleDateDto)
+        {
+            var dateFrom = saleDateDto.DateFrom ?? new DateOnly(System.DateTime.Today.Year, System.DateTime.Today.Month, 1);
+            var startValue = await GetStatementStartValueAsync(dateFrom);
+            var dineInResult = await _ordersService.GetDailyDineInSalesReport(saleDateDto);
+            var deliveryResult = await _ordersService.GetDailyDeliverySalesReport(saleDateDto);
+            
+            GetCostListDto getCostListDto = new GetCostListDto
+            {
+                StartDate = saleDateDto.DateFrom,
+                EndDate = saleDateDto.DateTo,
+                IsPurchase = saleDateDto.IsPurchase ?? true
+            };
+            var dailyCostReportDto = await _costService.GetCostListReport(getCostListDto);
+            var incomeList = await GetIncomeAsync(saleDateDto.DateFrom, saleDateDto.DateTo);
+
+            // ...รวมข้อมูลและคำนวณ summary ตามที่ต้องการ...
+
+            var summary = new DailyReportSummaryDto
+            {
+                // ใส่ค่าที่คำนวณได้
+                DailyStatements = new List<DailyStatementDto>()
+                // ...
+            };
+
+            return summary;
         }
     }
 }

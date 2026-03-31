@@ -456,6 +456,18 @@ public class OrdersService : IOrdersService
             // && od.MenuId != 20 && od.MenuId != 7); // กรองยอดขายหน้าร้าน , != 20 คือ ไม่นับน้ำเปล่า 7 โค้ก
 
             // ✅ แก้ไขการกรองปี/เดือน - ใช้ .Year/.Month property ของ DateOnly
+            if (saleDateDto.DateFrom.HasValue)
+            {
+                query = query.Where(c => c.OrderDate.HasValue && c.OrderDate.Value >= saleDateDto.DateFrom.Value);
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue && od.OrderHeader.OrderDate.Value >= saleDateDto.DateFrom.Value);
+            }
+            if (saleDateDto.DateTo.HasValue)
+            {
+                query = query.Where(c => c.OrderDate.HasValue && c.OrderDate.Value <= saleDateDto.DateTo.Value);
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue && od.OrderHeader.OrderDate.Value <= saleDateDto.DateTo.Value);
+            }
+
+            // เงื่อนไข year/month เดิมยังคงใช้ได้ (จะถูก where ซ้อนกัน)
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)
             {
                 query = query.Where(c => c.OrderDate.HasValue &&
@@ -648,6 +660,20 @@ public class OrdersService : IOrdersService
                 .Include(od => od.Menu)
                 .Include(od => od.OrderHeader)
                 .Where(od => od.OrderHeader != null && od.OrderHeader.OrderTypeId == 3); // เฉพาะเดลิเวอรี่ 
+
+            // ✅ เพิ่ม filter DateFrom/DateTo
+            if (saleDateDto.DateFrom.HasValue)
+            {
+                deliveryQuery = deliveryQuery.Where(d => d.SaleDate >= saleDateDto.DateFrom.Value);
+                orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue && oh.OrderDate.Value >= saleDateDto.DateFrom.Value);
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue && od.OrderHeader.OrderDate.Value >= saleDateDto.DateFrom.Value);
+            }
+            if (saleDateDto.DateTo.HasValue)
+            {
+                deliveryQuery = deliveryQuery.Where(d => d.SaleDate <= saleDateDto.DateTo.Value);
+                orderCountQuery = orderCountQuery.Where(oh => oh.OrderDate.HasValue && oh.OrderDate.Value <= saleDateDto.DateTo.Value);
+                orderDetailsQuery = orderDetailsQuery.Where(od => od.OrderHeader!.OrderDate.HasValue && od.OrderHeader.OrderDate.Value <= saleDateDto.DateTo.Value);
+            }
 
             // ✅ เพิ่มการกรองปี/เดือน สำหรับ Deliveries
             if (saleDateDto.Year.HasValue && saleDateDto.Month.HasValue)

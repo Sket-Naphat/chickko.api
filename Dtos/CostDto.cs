@@ -54,6 +54,8 @@ namespace chickko.api.Dtos
         public int? Month { get; set; } = null; // เดือน
         public int? Year { get; set; } = null; // ปี
         public bool? IsPurchase { get; set; } = null; // ใช้เพื่อบอกว่าต้นทุนนี้ถูกใช้ในการซื้อหรือไม่
+        public DateOnly? DateFrom { get; set; } = null!;
+        public DateOnly? DateTo { get; set; } = null!;
     }
     public class DailyCostReportDto
     {

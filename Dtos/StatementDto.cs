@@ -25,4 +25,42 @@ namespace chickko.api.Dtos
         public DateOnly? UpdateDate { get; set; }
         public TimeOnly? UpdateTime { get; set; }
     }
+
+    public class StatementFilterDto
+    {
+        public DateOnly? DateFrom { get; set; }
+        public DateOnly? DateTo { get; set; }
+    }
+
+    // DTO สำหรับข้อมูลรวม
+    public class DailyReportSummaryDto
+    {
+        public decimal Balance { get; set; }                    // ยอดเงินคงเหลือ
+        public decimal TotalBankAccount { get; set; }           // เงินบัญชีธนาคารรวม
+        public decimal TotalCash { get; set; }                  // เงินสดรวม
+        public decimal TotalCost { get; set; }                  // ต้นทุนรวม
+        public decimal TotalTransferCost { get; set; }          // ต้นทุนเงินโอนรวม
+        public decimal TotalCashCost { get; set; }              // ต้นทุนเงินสดรวม
+        public decimal TotalIncome { get; set; }                // รายได้รวม
+        public decimal NetProfit { get; set; }                  // กำไร net
+        public decimal HiddenCost { get; set; }                 // ต้นทุนแฝง
+
+        public List<DailyStatementDto> DailyStatements { get; set; } = new();
+    }
+
+    // DTO สำหรับแต่ละวัน
+    public class DailyStatementDto
+    {
+        public DateOnly Date { get; set; }
+        public decimal TotalCost { get; set; }                  // ต้นทุนรวม
+        public decimal TransferCost { get; set; }               // ต้นทุนเงินโอนรวม
+        public decimal CashCost { get; set; }                   // ต้นทุนเงินสดรวม
+        public decimal TotalIncome { get; set; }                // ยอดเงินเข้า
+        public decimal BankIncome { get; set; }                 // ยอดเงินบัญชีธนาคารเข้ารวม
+        public decimal CashIncome { get; set; }                 // ยอดเงินสดเข้ารวม
+        public decimal Balance { get; set; }                    // ยอดเงินคงเหลือ
+        public decimal Sales { get; set; }                      // ยอดขาย
+        public decimal Profit { get; set; }                     // กำไร
+        public decimal Difference { get; set; }                 // ส่วนต่างเงินเข้ากับยอดขาย
+    }
 }

@@ -96,5 +96,20 @@ namespace chickko.api.Controllers
                 return StatusCode(500, "An error occurred while deleting income");
             }
         }
+
+        [HttpPost("GetStatement")]
+        public async Task<IActionResult> GetStatement([FromBody] SaleDateDto saleDateDto)
+        {
+            try
+            {
+                var summary = await _statementService.GetStatementSummaryAsync(saleDateDto);
+                return Ok(new { data = summary, message = "Statement summary retrieved successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving statement summary");
+                return StatusCode(500, "An error occurred while retrieving statement summary");
+            }
+        }
     }
 }

@@ -11,5 +11,6 @@ namespace chickko.api.Interface
         Task<List<IncomeStatementDto>> GetIncomeAsync(DateOnly? dateFrom, DateOnly? dateTo);
         Task UpdateIncomeAsync(IncomeStatementDto incomeStatementDto);
         Task DeleteIncomeAsync(int incomeId);
+        Task<DailyReportSummaryDto> GetStatementSummaryAsync(SaleDateDto saleDateDto);
     }
 }

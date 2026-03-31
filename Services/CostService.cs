@@ -581,6 +581,16 @@ namespace chickko.api.Services
                     query = query.Where(c => c.CostCategoryID == getCostListDto.CostCategoryID);
                 }
 
+                       // ✅ เพิ่ม filter DateFrom/DateTo (ถ้ามี)
+                if (getCostListDto.StartDate.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue && c.CostDate.Value >= getCostListDto.StartDate.Value);
+                }
+                if (getCostListDto.EndDate.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue && c.CostDate.Value <= getCostListDto.EndDate.Value);
+                }
+
                 // Filter by Year and Month if provided
                 if (getCostListDto.Year.HasValue && getCostListDto.Month.HasValue)
                 {
