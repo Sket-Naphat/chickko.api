@@ -1,5 +1,6 @@
 using chickko.api.Dtos;
 using chickko.api.Models;
+using Google.Type;
 namespace chickko.api.Interface
 {
     public interface ICostService
@@ -18,5 +19,6 @@ namespace chickko.api.Interface
         Task UpdateStockCostDate(DateOnly costDate, int costId, int UpdateBy);
         Task<string> DeleteCost(int costId);
         Task<List<DailyCostReportDto>> GetCostListReport(GetCostListDto getCostListDto);
+        Task<List<DailyCostReportDto>> GetCostListbyPurchaseType(DateOnly costDateFrom, DateOnly costDateTo,int costPurchaseTypeId);
     }
 }

@@ -63,4 +63,10 @@ namespace chickko.api.Dtos
         public decimal Profit { get; set; }                     // กำไร
         public decimal Difference { get; set; }                 // ส่วนต่างเงินเข้ากับยอดขาย
     }
+
+    public class StatementStartValueDto
+    {
+        public DateOnly? StatementDate { get; set; }   // วันที่ของ statement ล่าสุด
+        public decimal StatementValue { get; set; }    // ยอดเงินคงเหลือ ณ วันนั้น
+    }
 }
