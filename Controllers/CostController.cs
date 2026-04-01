@@ -168,7 +168,9 @@ namespace chickko.api.controller
                     CostStatusID = costDto.CostStatusID == null ? (costDto.IsPurchase ? 3 : 2) : costDto.CostStatusID, //ถ้าไม่มีค่า CostStatusID ให้ใช้ค่า IsPurchase แทน
                     UpdateBy = costDto.UpdateBy ?? 0, // ถ้า UpdateBy เป็น null ให้ใช้ค่า 0
                     UpdateDate = costDto.UpdateDate ?? _utilService.GetThailandDate(),
-                    UpdateTime = costDto.UpdateTime ?? _utilService.GetThailandTime()
+                    UpdateTime = costDto.UpdateTime ?? _utilService.GetThailandTime(),
+                    CostDate = costDto.CostDate ?? _utilService.GetThailandDate(),
+                    CostTime = costDto.CostTime ?? _utilService.GetThailandTime()
                 };
                 await _costService.UpdatePurchaseCost(_cost);
                 return Ok();

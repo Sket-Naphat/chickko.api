@@ -94,6 +94,9 @@ namespace chickko.api.Services
                     existingCost.UpdateDate = _utilService.GetThailandDate();
                     existingCost.UpdateTime = _utilService.GetThailandTime();
                     existingCost.UpdateBy = cost.UpdateBy;
+                    existingCost.CostPurchaseTypeID = cost.CostPurchaseTypeID;
+                    existingCost.CostDate = cost.CostDate;
+                    existingCost.CostTime = cost.CostTime;
                     await _context.SaveChangesAsync();
                 }
                 else
@@ -104,7 +107,7 @@ namespace chickko.api.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "เกิดข้อผิดพลาดในการอัพเดทค่าใช้จ่าย");
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการอัพเดทค่าใช้จ่าย" + ex.Message);
                 throw;
             }
         }
@@ -453,6 +456,7 @@ namespace chickko.api.Services
                 var query = _context.Cost.AsQueryable()
                 .Include(c => c.CostCategory)
                 .Include(c => c.CostStatus)
+                .Include(c => c.CostPurchaseType)
                 .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
 
                 //กรองหมวดหมู่ค่าใช้จ่าย
@@ -502,7 +506,9 @@ namespace chickko.api.Services
                         CreateTime = c.CreateTime,
                         PurchaseDate = c.PurchaseDate,
                         PurchaseTime = c.PurchaseTime,
-                        UpdateBy = c.UpdateBy
+                        UpdateBy = c.UpdateBy,
+                        CostPurchaseTypeID = c.CostPurchaseTypeID,
+                        CostPurchaseType = c.CostPurchaseType
                     };
 
                     // ✅ เงื่อนไขพิเศษสำหรับ CostCategoryID = 1 // Stock Cost
