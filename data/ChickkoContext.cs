@@ -46,7 +46,7 @@ namespace chickko.api.Data
         // event models
         public DbSet<EventRollingReward> EventRollingRewards { get; set; } = null!;
         public DbSet<EventRollingResult> EventRollingResults { get; set; } = null!;
-
+        public DbSet<CostPurchaseType> CostPurchaseType { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

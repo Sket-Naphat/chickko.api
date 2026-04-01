@@ -45,6 +45,18 @@ namespace chickko.api.Services
                 throw;
             }
         }
+        public async Task<List<CostPurchaseType>> GetCostPurchaseTypeList()
+        {
+            try
+            {
+                return await _context.CostPurchaseType.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการดึงรายการประเภทการซื้อ");
+                throw;
+            }
+        }
 
         public async Task<Cost> CreateCostReturnCostID(Cost cost)
         {
@@ -82,6 +94,9 @@ namespace chickko.api.Services
                     existingCost.UpdateDate = _utilService.GetThailandDate();
                     existingCost.UpdateTime = _utilService.GetThailandTime();
                     existingCost.UpdateBy = cost.UpdateBy;
+                    existingCost.CostPurchaseTypeID = cost.CostPurchaseTypeID;
+                    existingCost.CostDate = cost.CostDate;
+                    existingCost.CostTime = cost.CostTime;
                     await _context.SaveChangesAsync();
                 }
                 else
@@ -92,7 +107,7 @@ namespace chickko.api.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "เกิดข้อผิดพลาดในการอัพเดทค่าใช้จ่าย");
+                _logger.LogError(ex, "เกิดข้อผิดพลาดในการอัพเดทค่าใช้จ่าย" + ex.Message);
                 throw;
             }
         }
@@ -101,7 +116,7 @@ namespace chickko.api.Services
 
         public async Task<List<CostDto>> GetStockCostRequest(CostDto costDto)
         {
-            var query = _context.Cost.Include(c => c.CostStatus).Where(c => !c.IsPurchase && c.CostCategoryID == 1);
+            var query = _context.Cost.Include(c => c.CostStatus).Where(c => !c.IsPurchase && c.CostCategoryID == 1 && c.IsActive == true);
 
             if (costDto is { CostDate: not null and var date } && date != default)
             {
@@ -145,7 +160,7 @@ namespace chickko.api.Services
                 //หาก่อนว่าในวันนี้มีรายการที่ต้องสั่งซื้อมั้ย
                 //var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchase).ToListAsync();
 
-                var query = _context.Cost.Where(c => !c.IsPurchase && c.CostCategoryID == 1);
+                var query = _context.Cost.Where(c => !c.IsPurchase && c.CostCategoryID == 1 && c.IsActive == true);
 
                 if (costDto is { CostDate: not null and var date } && date != default)
                 {
@@ -441,7 +456,8 @@ namespace chickko.api.Services
                 var query = _context.Cost.AsQueryable()
                 .Include(c => c.CostCategory)
                 .Include(c => c.CostStatus)
-                .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
+                .Include(c => c.CostPurchaseType)
+                .Where(c => c.IsPurchase == getCostListDto.IsPurchase && c.IsActive == true);
 
                 //กรองหมวดหมู่ค่าใช้จ่าย
                 if (getCostListDto.CostCategoryID > 0)
@@ -490,7 +506,9 @@ namespace chickko.api.Services
                         CreateTime = c.CreateTime,
                         PurchaseDate = c.PurchaseDate,
                         PurchaseTime = c.PurchaseTime,
-                        UpdateBy = c.UpdateBy
+                        UpdateBy = c.UpdateBy,
+                        CostPurchaseTypeID = c.CostPurchaseTypeID,
+                        CostPurchaseType = c.CostPurchaseType
                     };
 
                     // ✅ เงื่อนไขพิเศษสำหรับ CostCategoryID = 1 // Stock Cost
@@ -573,12 +591,22 @@ namespace chickko.api.Services
                 var query = _context.Cost.AsQueryable()
                     .Include(c => c.CostCategory)
                     .Include(c => c.CostStatus)
-                    .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
+                    .Where(c => c.IsPurchase == getCostListDto.IsPurchase && c.IsActive == true);
 
                 // กรองหมวดหมู่ค่าใช้จ่าย
                 if (getCostListDto.CostCategoryID > 0)
                 {
                     query = query.Where(c => c.CostCategoryID == getCostListDto.CostCategoryID);
+                }
+
+                       // ✅ เพิ่ม filter DateFrom/DateTo (ถ้ามี)
+                if (getCostListDto.StartDate.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue && c.CostDate.Value >= getCostListDto.StartDate.Value);
+                }
+                if (getCostListDto.EndDate.HasValue)
+                {
+                    query = query.Where(c => c.CostDate.HasValue && c.CostDate.Value <= getCostListDto.EndDate.Value);
                 }
 
                 // Filter by Year and Month if provided
@@ -673,6 +701,91 @@ namespace chickko.api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "เกิดข้อผิดพลาดในการดึงรายงานค่าใช้จ่ายรายวัน");
+                throw;
+            }
+        }
+
+        public async Task<List<DailyCostReportDto>> GetCostListbyPurchaseType(DateOnly costDateFrom, DateOnly costDateTo, int costPurchaseTypeId)
+        {
+            try
+            {
+                var query = _context.Cost.AsQueryable()
+                    .Include(c => c.CostCategory)
+                    .Include(c => c.CostStatus)
+                    .Where(c => c.IsPurchase == true // ✅ เฉพาะที่จ่ายแล้ว
+                        && c.CostDate.HasValue
+                        && c.CostDate.Value >= costDateFrom
+                        && c.CostDate.Value <= costDateTo
+                        && c.IsActive == true);
+
+                // ✅ กรองตามประเภทการซื้อ (ถ้าส่งมา > 0)
+                if (costPurchaseTypeId > 0)
+                {
+                    query = query.Where(c => c.CostPurchaseTypeID == costPurchaseTypeId);
+                }
+
+                // ✅ Group by วันที่ และ หมวดหมู่
+                var groupedCosts = await query
+                    .GroupBy(c => new
+                    {
+                        Date = c.CostDate,
+                        CategoryId = c.CostCategoryID,
+                        CategoryName = c.CostCategory!.CostCategoryName
+                    })
+                    .Select(g => new
+                    {
+                        Date = g.Key.Date,
+                        CategoryId = g.Key.CategoryId,
+                        CategoryName = g.Key.CategoryName,
+                        TotalAmount = g.Sum(x => x.CostPrice),
+                        Count = g.Count()
+                    })
+                    .ToListAsync();
+
+                // ✅ จัดกลุ่มตามวันที่ แล้ว map เป็น DailyCostReportDto
+                var dailyReports = groupedCosts
+                    .GroupBy(x => x.Date)
+                    .Select(dateGroup => new DailyCostReportDto
+                    {
+                        CostDate = dateGroup.Key,
+                        TotalAmount = (decimal)dateGroup.Sum(x => x.TotalAmount),
+                        TotalRawMaterialCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 1)
+                            .Sum(x => x.TotalAmount),
+                        TotalStaffCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 2)
+                            .Sum(x => x.TotalAmount),
+                        TotalOwnerCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 5)
+                            .Sum(x => x.TotalAmount),
+                        TotalUtilityCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 3)
+                            .Sum(x => x.TotalAmount),
+                        TotalOtherCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId != 1 && x.CategoryId != 2 && x.CategoryId != 3 && x.CategoryId != 5)
+                            .Sum(x => x.TotalAmount),
+                        CategoryDetails = dateGroup.Select(cat => new CostCategoryDetailDto
+                        {
+                            CostCategoryID = cat.CategoryId,
+                            CategoryName = cat.CategoryName ?? "ไม่ระบุ",
+                            TotalAmount = (decimal)cat.TotalAmount,
+                            Count = cat.Count
+                        }).ToList()
+                    })
+                    .OrderBy(x => x.CostDate) // ✅ เรียงจากวันเก่าไปใหม่
+                    .ToList();
+
+                _logger.LogInformation(
+                    $"📊 GetCostListbyPurchaseType: Found {dailyReports.Count} daily records" +
+                    $" | DateFrom: {costDateFrom}" +
+                    $" | DateTo: {costDateTo}" +
+                    $" | PurchaseTypeId: {costPurchaseTypeId}");
+
+                return dailyReports;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ เกิดข้อผิดพลาดในการดึงรายงานค่าใช้จ่ายตามประเภทการซื้อ");
                 throw;
             }
         }

@@ -27,6 +27,10 @@ namespace chickko.api.Models
         public DateOnly? UpdateDate { get; set; }
         public TimeOnly? UpdateTime { get; set; }
 
+        // เพิ่ม CostPurchaseTypeID และความสัมพันธ์
+        public int? CostPurchaseTypeID { get; set; }
+        public CostPurchaseType? CostPurchaseType { get; set; }
+
     }
 
     public class CostCategory
@@ -42,5 +46,14 @@ namespace chickko.api.Models
         public int CostStatusID { get; set; }
         public string CostStatusName { get; set; } = ""!;
         public string Description { get; set; } = "";
+    }
+
+    // ตาราง CostPurchaseType
+    public class CostPurchaseType
+    {
+        [Key]
+        public int CostPurchaseTypeID { get; set; }
+        public string CostPurchaseTypeName { get; set; } = string.Empty!;
+        public string? Description { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+using System.Linq;
 using chickko.api.Data;
 using chickko.api.Dtos;
 using chickko.api.Interface;
@@ -12,11 +13,22 @@ namespace chickko.api.Services
         private readonly ChickkoContext _context;
         private readonly ILogger<StatementService> _logger;
         private readonly IUtilService _utilService;
-        public StatementService(ChickkoContext context, ILogger<StatementService> logger, IUtilService utilService)
+        private readonly IOrdersService _ordersService;
+        private readonly ICostService _costService; // เพิ่มฟิลด์สำหรับ ICostService
+
+        public StatementService(
+            ChickkoContext context,
+            ILogger<StatementService> logger,
+            IUtilService utilService,
+            IOrdersService ordersService, // เพิ่ม DI IOrdersService
+            ICostService costService // เพิ่ม DI ICostService
+        )
         {
             _context = context;
             _logger = logger;
             _utilService = utilService;
+            _ordersService = ordersService; // กำหนดให้ field
+            _costService = costService; // กำหนดให้ field
         }
 
 
@@ -25,7 +37,7 @@ namespace chickko.api.Services
         /// </summary>
         /// <param name="income">ข้อมูลรายรับที่ได้รับจาก request</param>
         public async Task InsertIncomeAsync(IncomeStatementDto income)
-        {  
+        {
             try
             {
                 // สร้าง object Income ใหม่และ map ข้อมูลจาก DTO
@@ -53,7 +65,7 @@ namespace chickko.api.Services
                 _logger.LogError(ex, "Error inserting income");
                 throw;
             }
-            
+
         }
 
         public async Task InsertStatementAsync(StatementDto statementDto)
@@ -93,7 +105,7 @@ namespace chickko.api.Services
             }
         }
 
-        public async Task<List<IncomeStatementDto>> GetIncomeAsync(DateOnly? dateFrom, DateOnly? dateTo)
+        public async Task<List<IncomeStatementDto>> GetIncomeAsync(DateOnly? dateFrom, DateOnly? dateTo, int? incomeTypeId = null)
         {
             try
             {
@@ -104,8 +116,16 @@ namespace chickko.api.Services
                 dateFrom ??= firstDay;
                 dateTo ??= lastDay;
 
-                var incomes = await _context.Incomes
-                    .Where(i => i.IncomeDate >= dateFrom && i.IncomeDate <= dateTo)
+                var query = _context.Incomes
+                    .Where(i => i.IncomeDate >= dateFrom && i.IncomeDate <= dateTo);
+
+                // ✅ กรอง IncomeTypeId ถ้าส่งมา
+                if (incomeTypeId.HasValue && incomeTypeId.Value > 0)
+                {
+                    query = query.Where(i => i.IncomeTypeId == incomeTypeId.Value);
+                }
+
+                var incomes = await query
                     .OrderByDescending(i => i.IncomeDate)
                     .ThenByDescending(i => i.IncomeTime)
                     .Join(_context.IncomeTypes,
@@ -127,6 +147,7 @@ namespace chickko.api.Services
                     UpdateDate = i.income.UpdateDate,
                     UpdateTime = i.income.UpdateTime
                 }).ToList();
+
                 return incomeDtos;
             }
             catch (Exception ex)
@@ -177,6 +198,153 @@ namespace chickko.api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error deleting income");
+                throw;
+            }
+        }
+        public async Task<StatementStartValueDto> GetStatementStartValueAsync(DateOnly date)
+        {
+            try
+            {
+                var lastStatement = await _context.Statements
+                    .Where(s => s.StatementDate <= date && s.Active)
+                    .OrderByDescending(s => s.StatementDate)
+                    .ThenByDescending(s => s.StatementTime)
+                    .FirstOrDefaultAsync();
+
+                return new StatementStartValueDto
+                {
+                    StatementDate = lastStatement?.StatementDate,
+                    StatementValue = lastStatement?.StatementValue ?? 0m
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving statement start value");
+                throw;
+            }
+        }
+
+        public async Task<DailyReportSummaryDto> GetStatementSummaryAsync(SaleDateDto saleDateDto)
+        {
+            try
+            {
+                // 1) เตรียมช่วงวันที่รายงาน
+                var now = System.DateTime.Today;
+                var today = DateOnly.FromDateTime(now);
+                var dateFrom = saleDateDto.DateFrom ?? new DateOnly(now.Year, now.Month, 1);
+                var dateTo = saleDateDto.DateTo ?? new DateOnly(now.Year, now.Month, System.DateTime.DaysInMonth(now.Year, now.Month));
+                var effectiveDateTo = dateTo > today ? today : dateTo;
+
+                // 2) เตรียมยอดตั้งต้นและช่วงวันที่ที่จะใช้ query
+                var startStatement = await GetStatementStartValueAsync(dateFrom);
+                var runningBalance = startStatement.StatementValue;
+                var statementStartDate = startStatement.StatementDate ?? dateFrom;
+                saleDateDto.DateFrom = statementStartDate;
+                saleDateDto.DateTo = effectiveDateTo;
+
+                // 3) ดึงข้อมูลที่ใช้ประกอบรายงาน
+                var dineInResult = await _ordersService.GetDailyDineInSalesReport(saleDateDto);
+                var deliveryResult = await _ordersService.GetDailyDeliverySalesReport(saleDateDto);
+                var dailyCostWithBankTransfer = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 1);
+                var dailyCostWithCashPay = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 2);
+                var incomeWithBankTransfer = await GetIncomeAsync(statementStartDate, effectiveDateTo, 1);
+                var incomeWithCashPay = await GetIncomeAsync(statementStartDate, effectiveDateTo, 2);
+
+                // 4) สร้างรายการวันที่ทั้งหมดในช่วง (ทุกวันแม้ไม่มีข้อมูล)
+                var allDates = new List<DateOnly>();
+                for (var d = statementStartDate; d <= effectiveDateTo; d = d.AddDays(1))
+                    allDates.Add(d);
+
+                // 5) คำนวณข้อมูลรายวัน
+                var dailyStatements = new List<DailyStatementDto>();
+                var runningBalanceBank = runningBalance;
+                decimal startingBalance = runningBalance;
+                decimal runningBalanceCash = 0; // สมมติเริ่มต้นที่ 0 สำหรับเงินสด เพราะเราจะคำนวณแยกจากยอดรวมที่ได้จาก GetStatementStartValueAsync ซึ่งอาจจะรวมทั้งโอนและเงินสดแล้ว;
+                decimal previousBalance = runningBalance;
+                decimal previousBalanceBank = runningBalance;
+
+                foreach (var date in allDates)
+                {
+                    var dineIn = dineInResult.FirstOrDefault(x => x.SaleDate == date);
+                    var delivery = deliveryResult.FirstOrDefault(x => x.SaleDate == date);
+                    var bankCost = dailyCostWithBankTransfer.FirstOrDefault(x => x.CostDate == date);
+                    var cashCost = dailyCostWithCashPay.FirstOrDefault(x => x.CostDate == date);
+                    var bankIncome = incomeWithBankTransfer.Where(x => x.IncomeDate == date).Sum(x => x.IncomeValue);
+                    var cashIncome = incomeWithCashPay.Where(x => x.IncomeDate == date).Sum(x => x.IncomeValue);
+
+                    var sales = (dineIn?.TotalAmount ?? 0) + (delivery?.TotalAmount ?? 0);
+                    var bankCostTotal = bankCost?.TotalAmount ?? 0;
+                    var cashCostTotal = cashCost?.TotalAmount ?? 0;
+                    var totalCost = bankCostTotal + cashCostTotal;
+                    var totalIncome = bankIncome + cashIncome;
+
+                    runningBalanceBank = previousBalanceBank + bankIncome - bankCostTotal;
+                    runningBalanceCash += cashIncome;
+                    runningBalance = runningBalanceBank + runningBalanceCash;
+                    var profit = runningBalance - previousBalance;
+                    var difference = sales - totalIncome;
+
+                    dailyStatements.Add(new DailyStatementDto
+                    {
+                        Date = date,
+                        Sales = sales,           // ยอดขายรวม (dineIn + delivery)
+                        TotalCost = totalCost,       // ต้นทุนรวม (โอน + เงินสด)
+                        BankCost = bankCostTotal,    // ต้นทุนจ่ายโอน
+                        CashCost = cashCostTotal,   // ต้นทุนจ่ายเงินสด
+                        TotalIncome = totalIncome,     // รายรับรวม (โอน + เงินสด)
+                        BankIncome = bankIncome,      // รายรับโอนเข้าธนาคาร
+                        CashIncome = cashIncome,      // รายรับเงินสด
+                        Profit = profit,          // กำไร (วันนี้ - วันก่อน)
+                        Difference = difference,       // ส่วนต่าง (ยอดขาย - รายรับ)
+                        Balance = runningBalanceBank + runningBalanceCash,  // ยอดเงินคงเหลือสะสม
+                        BankBalance = runningBalanceBank, // ยอดเงินคงเหลือในบัญชีธนาคาร
+                        CashBalance = runningBalanceCash // ยอดเงินคงเหลือเงินสด
+                    });
+
+                    previousBalance = runningBalance;
+                    previousBalanceBank = runningBalanceBank;
+                }
+
+                // 6) คำนวณยอดรวมระดับ summary
+                var totalBank = dailyStatements.Sum(x => x.BankIncome);
+                var totalCash = dailyStatements.Sum(x => x.CashIncome);
+                var totalCostSum = dailyStatements.Sum(x => x.TotalCost);
+                var totalBankCost = dailyStatements.Sum(x => x.BankCost);
+                var totalCashCost = dailyStatements.Sum(x => x.CashCost);
+                var totalIncomeSum = dailyStatements.Sum(x => x.TotalIncome);
+                var totalSales = dailyStatements.Sum(x => x.Sales);
+                var hiddenCost = totalSales - totalIncomeSum;
+                var totalCostWithHidden = totalCostSum + hiddenCost;
+                var netProfit = totalIncomeSum - totalCostWithHidden;
+
+                var summary = new DailyReportSummaryDto
+                {
+                    Balance = runningBalanceBank + runningBalanceCash, // ยอดเงินคงเหลือรวม
+                    TotalBank = totalBank,
+                    TotalCash = totalCash,
+                    TotalCost = totalCostSum,
+                    TotalBankCost = totalBankCost,
+                    TotalCashCost = totalCashCost,
+                    TotalIncome = totalIncomeSum,
+                    NetProfit = netProfit, // รายรับรวม - (ต้นทุนรวม + ต้นทุนแฝง)
+                    HiddenCost = hiddenCost, // ต้นทุนแฝง = ยอดขาย - รายรับ
+                    TotalSales = totalSales,
+                    BankBalance = dailyStatements.LastOrDefault()?.BankBalance ?? 0, // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
+                    CashBalance = dailyStatements.LastOrDefault()?.CashBalance ?? 0, // ยอดเงินคงเหลือในเงินสด ณ วันสุดท้าย
+                    DailyStatements = dailyStatements,
+                    TotalCostWithHidden = totalCostWithHidden,
+                    StartingBalance = startingBalance // เงินตั้งต้น
+                };
+
+                _logger.LogInformation(
+                    "📊 StatementSummary | Balance: {Balance} | TotalIncome: {TotalIncome} | TotalCost: {TotalCost} | NetProfit: {NetProfit} | Days: {Days}",
+                    summary.Balance, summary.TotalIncome, summary.TotalCost, summary.NetProfit, dailyStatements.Count);
+
+                return summary;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ เกิดข้อผิดพลาดในการดึงข้อมูล Statement Summary");
                 throw;
             }
         }
