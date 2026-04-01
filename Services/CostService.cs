@@ -116,7 +116,7 @@ namespace chickko.api.Services
 
         public async Task<List<CostDto>> GetStockCostRequest(CostDto costDto)
         {
-            var query = _context.Cost.Include(c => c.CostStatus).Where(c => !c.IsPurchase && c.CostCategoryID == 1);
+            var query = _context.Cost.Include(c => c.CostStatus).Where(c => !c.IsPurchase && c.CostCategoryID == 1 && c.IsActive == true);
 
             if (costDto is { CostDate: not null and var date } && date != default)
             {
@@ -160,7 +160,7 @@ namespace chickko.api.Services
                 //หาก่อนว่าในวันนี้มีรายการที่ต้องสั่งซื้อมั้ย
                 //var _cost = await _context.Cost.Where(c => c.CostDate == costDto.CostDate && !c.IsPurchase).ToListAsync();
 
-                var query = _context.Cost.Where(c => !c.IsPurchase && c.CostCategoryID == 1);
+                var query = _context.Cost.Where(c => !c.IsPurchase && c.CostCategoryID == 1 && c.IsActive == true);
 
                 if (costDto is { CostDate: not null and var date } && date != default)
                 {
@@ -457,7 +457,7 @@ namespace chickko.api.Services
                 .Include(c => c.CostCategory)
                 .Include(c => c.CostStatus)
                 .Include(c => c.CostPurchaseType)
-                .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
+                .Where(c => c.IsPurchase == getCostListDto.IsPurchase && c.IsActive == true);
 
                 //กรองหมวดหมู่ค่าใช้จ่าย
                 if (getCostListDto.CostCategoryID > 0)
@@ -591,7 +591,7 @@ namespace chickko.api.Services
                 var query = _context.Cost.AsQueryable()
                     .Include(c => c.CostCategory)
                     .Include(c => c.CostStatus)
-                    .Where(c => c.IsPurchase == getCostListDto.IsPurchase);
+                    .Where(c => c.IsPurchase == getCostListDto.IsPurchase && c.IsActive == true);
 
                 // กรองหมวดหมู่ค่าใช้จ่าย
                 if (getCostListDto.CostCategoryID > 0)
@@ -715,7 +715,8 @@ namespace chickko.api.Services
                     .Where(c => c.IsPurchase == true // ✅ เฉพาะที่จ่ายแล้ว
                         && c.CostDate.HasValue
                         && c.CostDate.Value >= costDateFrom
-                        && c.CostDate.Value <= costDateTo);
+                        && c.CostDate.Value <= costDateTo
+                        && c.IsActive == true);
 
                 // ✅ กรองตามประเภทการซื้อ (ถ้าส่งมา > 0)
                 if (costPurchaseTypeId > 0)

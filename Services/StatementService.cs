@@ -37,7 +37,7 @@ namespace chickko.api.Services
         /// </summary>
         /// <param name="income">ข้อมูลรายรับที่ได้รับจาก request</param>
         public async Task InsertIncomeAsync(IncomeStatementDto income)
-        {  
+        {
             try
             {
                 // สร้าง object Income ใหม่และ map ข้อมูลจาก DTO
@@ -65,7 +65,7 @@ namespace chickko.api.Services
                 _logger.LogError(ex, "Error inserting income");
                 throw;
             }
-            
+
         }
 
         public async Task InsertStatementAsync(StatementDto statementDto)
@@ -206,7 +206,7 @@ namespace chickko.api.Services
             try
             {
                 var lastStatement = await _context.Statements
-                    .Where(s => s.StatementDate <= date)
+                    .Where(s => s.StatementDate <= date && s.Active)
                     .OrderByDescending(s => s.StatementDate)
                     .ThenByDescending(s => s.StatementTime)
                     .FirstOrDefaultAsync();
@@ -228,108 +228,112 @@ namespace chickko.api.Services
         {
             try
             {
+                // 1) เตรียมช่วงวันที่รายงาน
                 var now = System.DateTime.Today;
-                
-                // ✅ แปลง DateOnly? -> DateOnly ทันที
+                var today = DateOnly.FromDateTime(now);
                 var dateFrom = saleDateDto.DateFrom ?? new DateOnly(now.Year, now.Month, 1);
                 var dateTo = saleDateDto.DateTo ?? new DateOnly(now.Year, now.Month, System.DateTime.DaysInMonth(now.Year, now.Month));
+                var effectiveDateTo = dateTo > today ? today : dateTo;
 
-                // ✅ ส่ง dateFrom ที่เป็น DateOnly (non-nullable) เข้าไป
+                // 2) เตรียมยอดตั้งต้นและช่วงวันที่ที่จะใช้ query
                 var startStatement = await GetStatementStartValueAsync(dateFrom);
                 var runningBalance = startStatement.StatementValue;
-
-                // ✅ statementStartDate เป็น DateOnly (non-nullable)
                 var statementStartDate = startStatement.StatementDate ?? dateFrom;
-
-                // ✅ ปรับ saleDateDto ให้เป็น DateOnly? (nullable ได้เลย)
                 saleDateDto.DateFrom = statementStartDate;
-                saleDateDto.DateTo = dateTo;
+                saleDateDto.DateTo = effectiveDateTo;
 
+                // 3) ดึงข้อมูลที่ใช้ประกอบรายงาน
                 var dineInResult = await _ordersService.GetDailyDineInSalesReport(saleDateDto);
                 var deliveryResult = await _ordersService.GetDailyDeliverySalesReport(saleDateDto);
+                var dailyCostWithBankTransfer = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 1);
+                var dailyCostWithCashPay = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 2);
+                var incomeWithBankTransfer = await GetIncomeAsync(statementStartDate, effectiveDateTo, 1);
+                var incomeWithCashPay = await GetIncomeAsync(statementStartDate, effectiveDateTo, 2);
 
-                // ✅ statementStartDate และ dateTo เป็น DateOnly (non-nullable) ส่งได้เลย
-                var dailyCostWithBankTransfer = await _costService.GetCostListbyPurchaseType(statementStartDate, dateTo, 1);
-                var dailyCostWithCashPay = await _costService.GetCostListbyPurchaseType(statementStartDate, dateTo, 2);
+                // 4) สร้างรายการวันที่ทั้งหมดในช่วง (ทุกวันแม้ไม่มีข้อมูล)
+                var allDates = new List<DateOnly>();
+                for (var d = statementStartDate; d <= effectiveDateTo; d = d.AddDays(1))
+                    allDates.Add(d);
 
-                // ✅ GetIncomeAsync รับ DateOnly? จึงส่ง DateOnly เข้าไปได้เลย (implicit conversion)
-                var incomeWithBankTransfer = await GetIncomeAsync(statementStartDate, dateTo, 1);
-                var incomeWithCashPay = await GetIncomeAsync(statementStartDate, dateTo, 2);
-
-                // ✅ 2. รวมวันที่ทั้งหมดในช่วง (ทุกวันแม้ไม่มีข้อมูลก็ยังแสดง)
-                var dateSet = new HashSet<DateOnly>();
-
-                // Generate ทุกวันในช่วง statementStartDate ถึง dateTo
-                for (var d = statementStartDate; d <= dateTo; d = d.AddDays(1))
-                    dateSet.Add(d);
-
-                var allDates = dateSet.OrderBy(d => d).ToList();
-
-                // ✅ 3. loop แต่ละวัน แล้ว map ข้อมูล
+                // 5) คำนวณข้อมูลรายวัน
                 var dailyStatements = new List<DailyStatementDto>();
+                var runningBalanceBank = runningBalance;
+                decimal startingBalance = runningBalance;
+                decimal runningBalanceCash = 0; // สมมติเริ่มต้นที่ 0 สำหรับเงินสด เพราะเราจะคำนวณแยกจากยอดรวมที่ได้จาก GetStatementStartValueAsync ซึ่งอาจจะรวมทั้งโอนและเงินสดแล้ว;
                 decimal previousBalance = runningBalance;
+                decimal previousBalanceBank = runningBalance;
 
                 foreach (var date in allDates)
                 {
-                    // ดึงข้อมูลยอดขายของวันนั้น
-                    var dineIn   = dineInResult.FirstOrDefault(x => x.SaleDate == date);
+                    var dineIn = dineInResult.FirstOrDefault(x => x.SaleDate == date);
                     var delivery = deliveryResult.FirstOrDefault(x => x.SaleDate == date);
-
-                    // ดึงข้อมูลต้นทุนของวันนั้น
                     var bankCost = dailyCostWithBankTransfer.FirstOrDefault(x => x.CostDate == date);
                     var cashCost = dailyCostWithCashPay.FirstOrDefault(x => x.CostDate == date);
-
-                    // ดึงข้อมูลรายรับของวันนั้น (Sum ถ้าไม่มีข้อมูลได้ 0 อัตโนมัติ)
                     var bankIncome = incomeWithBankTransfer.Where(x => x.IncomeDate == date).Sum(x => x.IncomeValue);
                     var cashIncome = incomeWithCashPay.Where(x => x.IncomeDate == date).Sum(x => x.IncomeValue);
 
-                    // คำนวณยอดรวมแต่ละส่วน (ถ้าไม่มีข้อมูลได้ 0 จาก ?? 0)
-                    var sales         = (dineIn?.TotalAmount   ?? 0) + (delivery?.TotalAmount ?? 0);
-                    var transferCost  = bankCost?.TotalAmount  ?? 0;
-                    var cashCostTotal = cashCost?.TotalAmount  ?? 0;
-                    var totalCost     = transferCost + cashCostTotal;
-                    var totalIncome   = bankIncome + cashIncome;
+                    var sales = (dineIn?.TotalAmount ?? 0) + (delivery?.TotalAmount ?? 0);
+                    var bankCostTotal = bankCost?.TotalAmount ?? 0;
+                    var cashCostTotal = cashCost?.TotalAmount ?? 0;
+                    var totalCost = bankCostTotal + cashCostTotal;
+                    var totalIncome = bankIncome + cashIncome;
 
-                    // Balance = ยอดก่อนหน้า + รายรับ - ต้นทุนเงินสด
-                    runningBalance = previousBalance + totalIncome - cashCostTotal;
-
-                    // Profit = Balance วันนี้ - Balance วันก่อนหน้า
+                    runningBalanceBank = previousBalanceBank + bankIncome - bankCostTotal;
+                    runningBalanceCash += cashIncome;
+                    runningBalance = runningBalanceBank + runningBalanceCash;
                     var profit = runningBalance - previousBalance;
-
-                    // Difference = ยอดขาย - ยอดเงินเข้า
                     var difference = sales - totalIncome;
 
                     dailyStatements.Add(new DailyStatementDto
                     {
-                        Date         = date,
-                        Sales        = sales,           // ยอดขายรวม (dineIn + delivery)
-                        TotalCost    = totalCost,       // ต้นทุนรวม (โอน + เงินสด)
-                        TransferCost = transferCost,    // ต้นทุนจ่ายโอน
-                        CashCost     = cashCostTotal,   // ต้นทุนจ่ายเงินสด
-                        TotalIncome  = totalIncome,     // รายรับรวม (โอน + เงินสด)
-                        BankIncome   = bankIncome,      // รายรับโอนเข้าธนาคาร
-                        CashIncome   = cashIncome,      // รายรับเงินสด
-                        Balance      = runningBalance,  // ยอดเงินคงเหลือสะสม
-                        Profit       = profit,          // กำไร (balance วันนี้ - วันก่อน)
-                        Difference   = difference       // ส่วนต่าง (ยอดขาย - รายรับ)
+                        Date = date,
+                        Sales = sales,           // ยอดขายรวม (dineIn + delivery)
+                        TotalCost = totalCost,       // ต้นทุนรวม (โอน + เงินสด)
+                        BankCost = bankCostTotal,    // ต้นทุนจ่ายโอน
+                        CashCost = cashCostTotal,   // ต้นทุนจ่ายเงินสด
+                        TotalIncome = totalIncome,     // รายรับรวม (โอน + เงินสด)
+                        BankIncome = bankIncome,      // รายรับโอนเข้าธนาคาร
+                        CashIncome = cashIncome,      // รายรับเงินสด
+                        Profit = profit,          // กำไร (วันนี้ - วันก่อน)
+                        Difference = difference,       // ส่วนต่าง (ยอดขาย - รายรับ)
+                        Balance = runningBalanceBank + runningBalanceCash,  // ยอดเงินคงเหลือสะสม
+                        BankBalance = runningBalanceBank, // ยอดเงินคงเหลือในบัญชีธนาคาร
+                        CashBalance = runningBalanceCash // ยอดเงินคงเหลือเงินสด
                     });
 
-                    previousBalance = runningBalance; // อัปเดตยอดก่อนหน้าสำหรับวันถัดไป
+                    previousBalance = runningBalance;
+                    previousBalanceBank = runningBalanceBank;
                 }
 
-                // ✅ 4. คำนวณยอดรวมทั้งหมด
+                // 6) คำนวณยอดรวมระดับ summary
+                var totalBank = dailyStatements.Sum(x => x.BankIncome);
+                var totalCash = dailyStatements.Sum(x => x.CashIncome);
+                var totalCostSum = dailyStatements.Sum(x => x.TotalCost);
+                var totalBankCost = dailyStatements.Sum(x => x.BankCost);
+                var totalCashCost = dailyStatements.Sum(x => x.CashCost);
+                var totalIncomeSum = dailyStatements.Sum(x => x.TotalIncome);
+                var totalSales = dailyStatements.Sum(x => x.Sales);
+                var hiddenCost = totalSales - totalIncomeSum;
+                var totalCostWithHidden = totalCostSum + hiddenCost;
+                var netProfit = totalIncomeSum - totalCostWithHidden;
+
                 var summary = new DailyReportSummaryDto
                 {
-                    Balance           = runningBalance,
-                    TotalBankAccount  = dailyStatements.Sum(x => x.BankIncome),
-                    TotalCash         = dailyStatements.Sum(x => x.CashIncome),
-                    TotalCost         = dailyStatements.Sum(x => x.TotalCost),
-                    TotalTransferCost = dailyStatements.Sum(x => x.TransferCost),
-                    TotalCashCost     = dailyStatements.Sum(x => x.CashCost),
-                    TotalIncome       = dailyStatements.Sum(x => x.TotalIncome),
-                    NetProfit         = dailyStatements.Sum(x => x.Profit),
-                    HiddenCost        = 0,
-                    DailyStatements   = dailyStatements
+                    Balance = runningBalanceBank + runningBalanceCash, // ยอดเงินคงเหลือรวม
+                    TotalBank = totalBank,
+                    TotalCash = totalCash,
+                    TotalCost = totalCostSum,
+                    TotalBankCost = totalBankCost,
+                    TotalCashCost = totalCashCost,
+                    TotalIncome = totalIncomeSum,
+                    NetProfit = netProfit, // รายรับรวม - (ต้นทุนรวม + ต้นทุนแฝง)
+                    HiddenCost = hiddenCost, // ต้นทุนแฝง = ยอดขาย - รายรับ
+                    TotalSales = totalSales,
+                    BankBalance = dailyStatements.LastOrDefault()?.BankBalance ?? 0, // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
+                    CashBalance = dailyStatements.LastOrDefault()?.CashBalance ?? 0, // ยอดเงินคงเหลือในเงินสด ณ วันสุดท้าย
+                    DailyStatements = dailyStatements,
+                    TotalCostWithHidden = totalCostWithHidden,
+                    StartingBalance = startingBalance // เงินตั้งต้น
                 };
 
                 _logger.LogInformation(
