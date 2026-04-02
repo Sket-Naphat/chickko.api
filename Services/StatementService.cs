@@ -313,10 +313,12 @@ namespace chickko.api.Services
                 var totalCashCost = dailyStatements.Sum(x => x.CashCost);
                 var totalIncomeSum = dailyStatements.Sum(x => x.TotalIncome);
                 var totalSales = dailyStatements.Sum(x => x.Sales);
-                var hiddenCost = totalSales - totalIncomeSum;
-                var totalCostWithHidden = totalCostSum + hiddenCost;
-                var netProfit = totalIncomeSum - totalCostWithHidden;
-
+                var hiddenCost = totalIncomeSum - totalSales;// ต้นทุนแฝง = รายรับรวม - ยอดขายรวม ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
+                var totalCostWithHidden = totalCostSum + (totalSales - totalIncomeSum); // ต้นทุนรวมถ้าคิดต้นทุนแฝงด้วย = ต้นทุนรวม + (ยอดขายรวม - รายรับรวม) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
+                // var netProfit = totalIncomeSum - totalCostWithHidden;
+                var netProfit = totalIncomeSum - totalCostSum; // กำไรสุทธิ = รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง) เพราะต้นทุนแฝงคือส่วนต่างระหว่างยอดขายกับรายรับ ซึ่งถ้านำมาคิดเป็นต้นทุนจะทำให้กำไรสุทธิลดลงมากเกินไปและไม่สะท้อนภาพจริงของธุรกิจที่อาจมีต้นทุนแฝงสูงแต่ยังมีกำไรได้ถ้ารายรับสูงกว่าต้นทุนจริงๆ
+                var netProfitWithHidden = totalIncomeSum - totalCostWithHidden; // กำไรสุทธิถ้าคิดต้นทุนแฝงด้วย = รายรับรวม - (ต้นทุนรวม + ต้นทุนแฝง) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
+                
                 var summary = new DailyReportSummaryDto
                 {
                     Balance = runningBalanceBank + runningBalanceCash, // ยอดเงินคงเหลือรวม
@@ -326,14 +328,16 @@ namespace chickko.api.Services
                     TotalBankCost = totalBankCost,
                     TotalCashCost = totalCashCost,
                     TotalIncome = totalIncomeSum,
-                    NetProfit = netProfit, // รายรับรวม - (ต้นทุนรวม + ต้นทุนแฝง)
+                    NetProfit = netProfit, // รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง)
                     HiddenCost = hiddenCost, // ต้นทุนแฝง = ยอดขาย - รายรับ
                     TotalSales = totalSales,
                     BankBalance = dailyStatements.LastOrDefault()?.BankBalance ?? 0, // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
                     CashBalance = dailyStatements.LastOrDefault()?.CashBalance ?? 0, // ยอดเงินคงเหลือในเงินสด ณ วันสุดท้าย
                     DailyStatements = dailyStatements,
                     TotalCostWithHidden = totalCostWithHidden,
-                    StartingBalance = startingBalance // เงินตั้งต้น
+                    StartingBalance = startingBalance, // เงินตั้งต้น
+                    netProfitWithHidden = netProfitWithHidden, // กำไรสุทธิถ้าคิดต้นทุนแฝงด้วย
+                    NetChange = (runningBalanceBank + runningBalanceCash) - startingBalance // การเปลี่ยนแปลงของยอดเงินคงเหลือ = ยอดเงินคงเหลือ ณ วันสุดท้าย - เงินตั้งต้น ซึ่งจะช่วยให้เห็นภาพรวมของการเปลี่ยนแปลงของยอดเงินคงเหลือในช่วงเวลาที่รายงานได้ชัดเจนขึ้น
                 };
 
                 _logger.LogInformation(
