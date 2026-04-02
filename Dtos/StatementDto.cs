@@ -49,6 +49,8 @@ namespace chickko.api.Dtos
         public decimal CashBalance { get; set; }               // ยอดเงินคงเหลือในเงินสด
         public decimal TotalCostWithHidden { get; set; }       // ต้นทุนรวมที่รวมต้นทุนแฝงแล้ว
         public decimal StartingBalance { get; set; } = 0; // เงินตั่งต้น
+        public decimal netProfitWithHidden { get; set; }                  // กำไร net ที่รวมต้นทุนแฝงแล้ว
+        public decimal NetChange { get; set; }                  //เงินคงเหลือ - เงินต้นรวม
 
         public List<DailyStatementDto> DailyStatements { get; set; } = new();
     }
