@@ -369,8 +369,8 @@ namespace chickko.api.Services
                         IsPurchase = item.IsPurchase, // สถานะการจ่ายเงิน
                         CostStatusID = item.IsPurchase ? 3 : 2, // 3=จ่ายแล้ว, 2=ยังไม่จ่าย
                         CreateBy = item.CreatedBy ?? 1, // ผู้อัปเดตข้อมูล
-                        UpdateDate = _utilService.GetThailandDate(), // วันที่อัปเดต
-                        UpdateTime = _utilService.GetThailandTime() // เวลาที่อัปเดต
+                        CreateDate = _utilService.GetThailandDate(), // วันที่อัปเดต
+                        CreateTime = _utilService.GetThailandTime() // เวลาที่อัปเดต
                     };
 
                     // ถ้าเป็นการจ่ายเงินจริง ให้บันทึกวันที่และเวลาที่จ่าย
@@ -378,6 +378,7 @@ namespace chickko.api.Services
                     {
                         cost.PurchaseDate = purchaseDateTime; // ใช้ PurchaseDate ที่ส่งมา
                         cost.PurchaseTime = _utilService.GetThailandTime();
+                        cost.CostPurchaseTypeID = 1; // สมมติว่าประเภทการซื้อเป็น "จ่ายค่าแรง"
                     }
 
                     // บันทึก Cost ลงฐานข้อมูลและรับ CostId กลับมา
