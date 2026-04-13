@@ -132,5 +132,19 @@ namespace chickko.api.controller
                 return BadRequest("เกิดปัญหาในการแก้ไขเวลาลงเวลาออกงาน");
             }
         }
+        [HttpPost("CreateWorktime")]
+        public async Task<IActionResult> CreateWorktime(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                var result = await _WorktimeService.CreateWorktime(worktimeDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("🔥 Error : " + ex.Message);
+                return BadRequest("เกิดปัญหาในการสร้างเวลาทำงาน");
+            }
+        }
     }
 }

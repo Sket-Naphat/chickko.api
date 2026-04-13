@@ -35,18 +35,20 @@ namespace chickko.api.Controllers
             {
                 var currentSite = _siteService.GetCurrentSite();
                 var result = await _authService.Register(request);
-                
+
                 if (result == false)
                 {
-                    return BadRequest(new { 
+                    return BadRequest(new
+                    {
                         success = false,
                         message = "Registration failed.",
                         site = currentSite,
                         timestamp = DateTime.UtcNow
                     });
                 }
-                
-                return Ok(new { 
+
+                return Ok(new
+                {
                     success = true,
                     message = "User registered successfully",
                     site = currentSite,
@@ -56,7 +58,27 @@ namespace chickko.api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { 
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message,
+                    site = _siteService.GetCurrentSite(),
+                    timestamp = DateTime.UtcNow
+                });
+            }
+        }
+        [HttpGet("GetAllEmployee")]
+        public async Task<IActionResult> GetAllEmployee()
+        {
+            try
+            {
+                var employees = await _authService.GetAllEmployee();
+                return Ok(employees);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
                     success = false,
                     message = ex.Message,
                     site = _siteService.GetCurrentSite(),
