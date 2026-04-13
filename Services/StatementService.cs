@@ -282,7 +282,7 @@ namespace chickko.api.Services
                     runningBalanceCash += cashIncome;
                     runningBalance = runningBalanceBank + runningBalanceCash;
                     var profit = runningBalance - previousBalance;
-                    var difference = sales - totalIncome;
+                    var difference = totalIncome - sales;
 
                     dailyStatements.Add(new DailyStatementDto
                     {
@@ -295,7 +295,7 @@ namespace chickko.api.Services
                         BankIncome = bankIncome,      // รายรับโอนเข้าธนาคาร
                         CashIncome = cashIncome,      // รายรับเงินสด
                         Profit = profit,          // กำไร (วันนี้ - วันก่อน)
-                        Difference = difference,       // ส่วนต่าง (ยอดขาย - รายรับ)
+                        Difference = difference,       // ส่วนต่าง (รายรับ - ยอดขาย)
                         Balance = runningBalanceBank + runningBalanceCash,  // ยอดเงินคงเหลือสะสม
                         BankBalance = runningBalanceBank, // ยอดเงินคงเหลือในบัญชีธนาคาร
                         CashBalance = runningBalanceCash // ยอดเงินคงเหลือเงินสด
