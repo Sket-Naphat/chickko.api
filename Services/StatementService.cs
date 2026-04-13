@@ -305,6 +305,8 @@ namespace chickko.api.Services
                     previousBalanceBank = runningBalanceBank;
                 }
 
+                //ดึงข้อมูลรายจ่ายคงค้าง (ต้นทุนที่เกิดขึ้นแต่ยังไม่จ่ายจริง) ในช่วงเวลาที่รายงาน
+                var pendingCosts = await GetPendingCostsAsync(statementStartDate, effectiveDateTo);
                 // 6) คำนวณยอดรวมระดับ summary
                 var totalBank = dailyStatements.Sum(x => x.BankIncome);
                 var totalCash = dailyStatements.Sum(x => x.CashIncome);
@@ -318,7 +320,7 @@ namespace chickko.api.Services
                 // var netProfit = totalIncomeSum - totalCostWithHidden;
                 var netProfit = totalIncomeSum - totalCostSum; // กำไรสุทธิ = รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง) เพราะต้นทุนแฝงคือส่วนต่างระหว่างยอดขายกับรายรับ ซึ่งถ้านำมาคิดเป็นต้นทุนจะทำให้กำไรสุทธิลดลงมากเกินไปและไม่สะท้อนภาพจริงของธุรกิจที่อาจมีต้นทุนแฝงสูงแต่ยังมีกำไรได้ถ้ารายรับสูงกว่าต้นทุนจริงๆ
                 var netProfitWithHidden = totalIncomeSum - totalCostWithHidden; // กำไรสุทธิถ้าคิดต้นทุนแฝงด้วย = รายรับรวม - (ต้นทุนรวม + ต้นทุนแฝง) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
-                
+
                 var summary = new DailyReportSummaryDto
                 {
                     Balance = runningBalanceBank + runningBalanceCash, // ยอดเงินคงเหลือรวม
@@ -337,7 +339,8 @@ namespace chickko.api.Services
                     TotalCostWithHidden = totalCostWithHidden,
                     StartingBalance = startingBalance, // เงินตั้งต้น
                     netProfitWithHidden = netProfitWithHidden, // กำไรสุทธิถ้าคิดต้นทุนแฝงด้วย
-                    NetChange = (runningBalanceBank + runningBalanceCash) - startingBalance // การเปลี่ยนแปลงของยอดเงินคงเหลือ = ยอดเงินคงเหลือ ณ วันสุดท้าย - เงินตั้งต้น ซึ่งจะช่วยให้เห็นภาพรวมของการเปลี่ยนแปลงของยอดเงินคงเหลือในช่วงเวลาที่รายงานได้ชัดเจนขึ้น
+                    NetChange = (runningBalanceBank + runningBalanceCash) - startingBalance, // การเปลี่ยนแปลงของยอดเงินคงเหลือ = ยอดเงินคงเหลือ ณ วันสุดท้าย - เงินตั้งต้น ซึ่งจะช่วยให้เห็นภาพรวมของการเปลี่ยนแปลงของยอดเงินคงเหลือในช่วงเวลาที่รายงานได้ชัดเจนขึ้น
+                    PendingCost = pendingCosts // รายจ่ายคงค้างในช่วงเวลาที่รายงาน
                 };
 
                 _logger.LogInformation(
@@ -349,6 +352,37 @@ namespace chickko.api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ เกิดข้อผิดพลาดในการดึงข้อมูล Statement Summary");
+                throw;
+            }
+        }
+
+        private async Task<decimal> GetPendingCostsAsync(DateOnly startDate, DateOnly endDate)
+        {
+            try
+            {
+                // ดึงค่าแรงคงค้าง (IsPurchase == false) ของพนักงาน (ไม่รวม owner)
+                var totalPendingWage = await _context.Worktime
+                    .Include(w => w.Employee)
+                    .Where(w => w.WorkDate >= startDate
+                             && w.WorkDate <= endDate
+                             && w.IsPurchase == false
+                             && w.Employee != null
+                             && w.Employee.UserPermistionID != 1) // ไม่รวม owner
+                    .SumAsync(w => (decimal)w.WageCost);
+
+                // ดึงรายจ่ายคงค้างจาก Cost (IsPurchase == false) ในช่วงวันที่เดียวกัน
+                var totalPendingCost = await _context.Cost
+                    .Where(c => c.CostDate >= startDate
+                             && c.CostDate <= endDate
+                             && c.IsPurchase == false
+                             && c.IsActive == true)
+                    .SumAsync(c => (decimal)c.CostPrice);
+
+                return totalPendingWage + totalPendingCost;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving pending costs");
                 throw;
             }
         }

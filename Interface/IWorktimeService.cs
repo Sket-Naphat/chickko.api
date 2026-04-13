@@ -12,5 +12,6 @@ namespace chickko.api.Interface
         Task<WorktimeSummaryDto> GetWorkTimeCostByEmployeeIDandPeriod(WorktimeDto worktimeDto);
         Task<string> UpdateTimeClockIn(WorktimeDto worktimeDto);
         Task<string> UpdateTimeClockOut(WorktimeDto worktimeDto);
+        Task<string> CreateWorktime(WorktimeDto worktimeDto);
     }
 }

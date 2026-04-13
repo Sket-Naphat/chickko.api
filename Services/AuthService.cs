@@ -165,5 +165,20 @@ namespace chickko.api.Services
         public string GenerateJwtToken(User user) { ... }
         public string GenerateJwtToken(User user, string site) { ... }
         */
+        public async Task<List<User>> GetAllEmployee()
+        {
+            try
+            {
+                var employees = await _context.Users
+                    .Where(u => u.UserPermistionID != 1 && u.IsActive == true)
+                    .ToListAsync();
+                    employees.ForEach(e => e.Password = string.Empty); // ลบ password ก่อนส่งออก
+                return employees;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to retrieve employees: " + ex.Message);
+            }
+        }
     }
 }

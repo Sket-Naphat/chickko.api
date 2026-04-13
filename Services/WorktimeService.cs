@@ -556,5 +556,103 @@ namespace chickko.api.Services
                 throw;
             }
         }
+
+        public async Task<string> CreateWorktime(WorktimeDto worktimeDto)
+        {
+            try
+            {
+                // ตรวจสอบข้อมูลที่จำเป็น
+                if (worktimeDto.EmployeeID <= 0 || string.IsNullOrEmpty(worktimeDto.WorkDate))
+                    return "ข้อมูลไม่ครบถ้วน กรุณาระบุพนักงานและวันที่ทำงาน !";
+
+                // แปลง WorkDate
+                var parsed = DateOnly.TryParseExact(worktimeDto.WorkDate, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out var workDate);
+                if (!parsed)
+                    return "รูปแบบวันที่ไม่ถูกต้อง (ต้องเป็น yyyy-MM-dd) !";
+
+                // ตรวจสอบว่าพนักงานมีข้อมูลการทำงานในวันนี้แล้วหรือยัง
+                // var existing = await _context.Worktime
+                //     .FirstOrDefaultAsync(w => w.WorkDate == workDate && w.EmployeeID == worktimeDto.EmployeeID);
+                // if (existing != null)
+                //     return "มีข้อมูลการทำงานของพนักงานในวันที่ระบุแล้ว !";
+
+                // ดึงข้อมูลพนักงานเพื่อนำมาคำนวณค่าแรง
+                var employee = await _context.Users
+                    .Include(u => u.UserPermistion)
+                    .FirstOrDefaultAsync(e => e.UserId == worktimeDto.EmployeeID);
+                if (employee == null)
+                    return "ไม่พบข้อมูลพนักงาน !";
+
+                // แปลง TimeClockIn และ TimeClockOut
+                TimeOnly? timeClockIn = null;
+                TimeOnly? timeClockOut = null;
+
+                if (!string.IsNullOrEmpty(worktimeDto.TimeClockIn))
+                    timeClockIn = TimeOnly.ParseExact(worktimeDto.TimeClockIn, "HH:mm:ss");
+
+                if (!string.IsNullOrEmpty(worktimeDto.TimeClockOut))
+                    timeClockOut = TimeOnly.ParseExact(worktimeDto.TimeClockOut, "HH:mm:ss");
+
+                // คำนวณชั่วโมงการทำงาน (รองรับกรณีทำงานข้ามคืน)
+                double totalWorktime = 0;
+                double wageCost = 0;
+
+                if (timeClockIn.HasValue && timeClockOut.HasValue)
+                {
+                    var clockIn = timeClockIn.Value.ToTimeSpan();
+                    var clockOut = timeClockOut.Value.ToTimeSpan();
+
+                    // ถ้าเวลาออกงานน้อยกว่าเวลาเข้างาน แสดงว่าทำงานข้ามคืน
+                    if (clockOut < clockIn)
+                        clockOut = clockOut.Add(TimeSpan.FromDays(1));
+
+                    totalWorktime = Math.Round((clockOut - clockIn).TotalHours, 2);
+
+                    // คำนวณค่าแรงตาม UserPermission
+                    // - Owner (UserPermistionID == 1): ค่าแรงคงที่รายวัน
+                    // - Employee: ค่าแรงรายชั่วโมง * จำนวนชั่วโมง
+                    if (employee.UserPermistion != null)
+                    {
+                        wageCost = employee.UserPermistion.UserPermistionID == 1
+                            ? employee.UserPermistion.WageCost
+                            : totalWorktime * employee.UserPermistion.WageCost;
+
+                        wageCost = Math.Ceiling(wageCost);
+                    }
+                }
+
+                // สร้าง Worktime record ใหม่
+                var newWorktime = new Worktime
+                {
+                    EmployeeID = worktimeDto.EmployeeID,
+                    WorkDate = workDate,
+                    TimeClockIn = timeClockIn,
+                    TimeClockOut = timeClockOut,
+                    TotalWorktime = totalWorktime,
+                    WageCost = wageCost,
+                    Bonus = worktimeDto.Bonus,
+                    Price = worktimeDto.Price,
+                    IsPurchase = worktimeDto.IsPurchase,
+                    Remark = worktimeDto.Remark ?? "",
+                    ClockInLocation = worktimeDto.ClockInLocation ?? "",
+                    ClockOutLocation = worktimeDto.ClockOutLocation ?? "",
+                    Active = true,
+                    UpdateDate = _utilService.GetThailandDate(),
+                    UpdateTime = _utilService.GetThailandTime(),
+                    UpdateBy = worktimeDto.CreatedBy
+                };
+
+                _context.Worktime.Add(newWorktime);
+                await _context.SaveChangesAsync();
+
+                return "สร้างข้อมูลการทำงานสำเร็จ !";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] CreateWorktime: {ex.Message}");
+                throw;
+            }
+        }
     }
 }
