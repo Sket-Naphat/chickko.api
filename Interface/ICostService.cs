@@ -19,6 +19,7 @@ namespace chickko.api.Interface
         Task UpdateStockCostDate(DateOnly costDate, int costId, int UpdateBy);
         Task<string> DeleteCost(int costId);
         Task<List<DailyCostReportDto>> GetCostListReport(GetCostListDto getCostListDto);
-        Task<List<DailyCostReportDto>> GetCostListbyPurchaseType(DateOnly costDateFrom, DateOnly costDateTo,int costPurchaseTypeId);
+        Task<List<DailyCostReportDto>> GetCostListbyPurchaseType(DateOnly costDateFrom, DateOnly costDateTo, int costPurchaseTypeId);
+        Task<List<DailyCostReportDto>> GetOwnerCost(DateOnly costDateFrom, DateOnly costDateTo);
     }
 }

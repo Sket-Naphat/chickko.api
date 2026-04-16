@@ -281,8 +281,8 @@ namespace chickko.api.Services
                     runningBalanceBank = previousBalanceBank + bankIncome - bankCostTotal;
                     runningBalanceCash += cashIncome;
                     runningBalance = runningBalanceBank + runningBalanceCash;
-                    var profit = runningBalance - previousBalance;
-                    var difference = totalIncome - sales;
+                    var profit = runningBalance - previousBalance - cashCostTotal; // กำไรของวันนี้ = ยอดเงินคงเหลือวันนี้ - ยอดเงินคงเหลือเมื่อวาน - ต้นทุนจ่ายเงินสดของวันนี้ ซึ่งจะช่วยให้เห็นภาพรวมของกำไรที่แท้จริงของแต่ละวันได้ชัดเจนขึ้น เพราะต้นทุนจ่ายเงินสดจะถูกหักออกจากกำไรทันทีในวันนั้นๆ ในขณะที่ต้นทุนจ่ายโอนจะสะท้อนผ่านยอดเงินคงเหลือในบัญชีธนาคารที่อัปเดตทุกวัน
+                    var difference = (totalIncome + cashCostTotal) - sales; // ส่วนต่างระหว่างรายรับกับยอดขาย ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
 
                     dailyStatements.Add(new DailyStatementDto
                     {
@@ -308,39 +308,42 @@ namespace chickko.api.Services
                 //ดึงข้อมูลรายจ่ายคงค้าง (ต้นทุนที่เกิดขึ้นแต่ยังไม่จ่ายจริง) ในช่วงเวลาที่รายงาน
                 var pendingCosts = await GetPendingCostsAsync(statementStartDate, effectiveDateTo);
                 // 6) คำนวณยอดรวมระดับ summary
+                var ownerCost = await _costService.GetOwnerCost(statementStartDate, effectiveDateTo); // ดึงข้อมูลต้นทุนเจ้าของในช่วงเวลาที่รายงาน
+                var totalOwnerCost = ownerCost.Sum(x => x.TotalAmount); // ยอดรวมต้นทุนเจ้าของในช่วงเวลาที่รายงาน
                 var totalBank = dailyStatements.Sum(x => x.BankIncome);
                 var totalCash = dailyStatements.Sum(x => x.CashIncome);
-                var totalCostSum = dailyStatements.Sum(x => x.TotalCost);
+                var totalCostSum = dailyStatements.Sum(x => x.TotalCost) + totalOwnerCost;
                 var totalBankCost = dailyStatements.Sum(x => x.BankCost);
                 var totalCashCost = dailyStatements.Sum(x => x.CashCost);
                 var totalIncomeSum = dailyStatements.Sum(x => x.TotalIncome);
                 var totalSales = dailyStatements.Sum(x => x.Sales);
-                var hiddenCost = totalIncomeSum - totalSales;// ต้นทุนแฝง = รายรับรวม - ยอดขายรวม ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
-                var totalCostWithHidden = totalCostSum + (totalSales - totalIncomeSum); // ต้นทุนรวมถ้าคิดต้นทุนแฝงด้วย = ต้นทุนรวม + (ยอดขายรวม - รายรับรวม) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
+                var hiddenCost = totalIncomeSum + totalCashCost - totalSales;// ต้นทุนแฝง = รายรับรวม - ยอดขายรวม ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
+                var totalCostWithHidden = totalCostSum - hiddenCost; // ต้นทุนรวมถ้าคิดต้นทุนแฝงด้วย = ต้นทุนรวม + (ยอดขายรวม - รายรับรวม) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
                 // var netProfit = totalIncomeSum - totalCostWithHidden;
                 var netProfit = totalIncomeSum - totalCostSum; // กำไรสุทธิ = รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง) เพราะต้นทุนแฝงคือส่วนต่างระหว่างยอดขายกับรายรับ ซึ่งถ้านำมาคิดเป็นต้นทุนจะทำให้กำไรสุทธิลดลงมากเกินไปและไม่สะท้อนภาพจริงของธุรกิจที่อาจมีต้นทุนแฝงสูงแต่ยังมีกำไรได้ถ้ารายรับสูงกว่าต้นทุนจริงๆ
                 var netProfitWithHidden = totalIncomeSum - totalCostWithHidden; // กำไรสุทธิถ้าคิดต้นทุนแฝงด้วย = รายรับรวม - (ต้นทุนรวม + ต้นทุนแฝง) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
-
+                runningBalanceBank -= totalOwnerCost; // ปรับยอดเงินคงเหลือในบัญชีธนาคารโดยหักต้นทุนเจ้าของออกไป เพราะต้นทุนเจ้าของคือค่าใช้จ่ายที่เกิดขึ้นจริงของธุรกิจ ถึงแม้จะไม่ได้จ่ายออกไปในรูปแบบเงินสดหรือโอน แต่ก็เป็นต้นทุนที่ควรนำมาคิดรวมในการวิเคราะห์กำไรขาดทุนเพื่อให้เห็นภาพที่รัดกุมมากขึ้น
                 var summary = new DailyReportSummaryDto
                 {
-                    Balance = runningBalanceBank + runningBalanceCash, // ยอดเงินคงเหลือรวม
-                    TotalBank = totalBank,
+                    Balance = runningBalanceBank + runningBalanceCash , // ยอดเงินคงเหลือรวม
+                    TotalBank = totalBank , // เงินบัญชีธนาคารรวมที่หักต้นทุนเจ้าของออกไปแล้ว เพราะต้นทุนเจ้าของคือค่าใช้จ่ายที่เกิดขึ้นจริงของธุรกิจ ถึงแม้จะไม่ได้จ่ายออกไปในรูปแบบเงินสดหรือโอน แต่ก็เป็นต้นทุนที่ควรนำมาคิดรวมในการวิเคราะห์กำไรขาดทุนเพื่อให้เห็นภาพที่รัดกุมมากขึ้น
                     TotalCash = totalCash,
-                    TotalCost = totalCostSum,
+                    TotalCost = totalCostSum, // ต้นทุนรวมที่รวมต้นทุนเจ้าของด้วย เพราะต้นทุนเจ้าของคือค่าใช้จ่ายที่เกิดขึ้นจริงของธุรกิจ ถึงแม้จะไม่ได้จ่ายออกไปในรูปแบบเงินสดหรือโอน แต่ก็เป็นต้นทุนที่ควรนำมาคิดรวมในการวิเคราะห์กำไรขาดทุนเพื่อให้เห็นภาพที่รัดกุมมากขึ้น
                     TotalBankCost = totalBankCost,
                     TotalCashCost = totalCashCost,
                     TotalIncome = totalIncomeSum,
                     NetProfit = netProfit, // รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง)
                     HiddenCost = hiddenCost, // ต้นทุนแฝง = ยอดขาย - รายรับ
                     TotalSales = totalSales,
-                    BankBalance = dailyStatements.LastOrDefault()?.BankBalance ?? 0, // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
+                    BankBalance = (dailyStatements.LastOrDefault()?.BankBalance ?? 0) - totalOwnerCost, // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
                     CashBalance = dailyStatements.LastOrDefault()?.CashBalance ?? 0, // ยอดเงินคงเหลือในเงินสด ณ วันสุดท้าย
                     DailyStatements = dailyStatements,
                     TotalCostWithHidden = totalCostWithHidden,
                     StartingBalance = startingBalance, // เงินตั้งต้น
                     netProfitWithHidden = netProfitWithHidden, // กำไรสุทธิถ้าคิดต้นทุนแฝงด้วย
                     NetChange = (runningBalanceBank + runningBalanceCash) - startingBalance, // การเปลี่ยนแปลงของยอดเงินคงเหลือ = ยอดเงินคงเหลือ ณ วันสุดท้าย - เงินตั้งต้น ซึ่งจะช่วยให้เห็นภาพรวมของการเปลี่ยนแปลงของยอดเงินคงเหลือในช่วงเวลาที่รายงานได้ชัดเจนขึ้น
-                    PendingCost = pendingCosts // รายจ่ายคงค้างในช่วงเวลาที่รายงาน
+                    PendingCost = pendingCosts, // รายจ่ายคงค้างในช่วงเวลาที่รายงาน
+                    TotalOwnerCost = totalOwnerCost // ต้นทุนเจ้าของรวมในช่วงเวลาที่รายงาน
                 };
 
                 _logger.LogInformation(
