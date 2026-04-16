@@ -53,6 +53,7 @@ namespace chickko.api.Dtos
         public decimal NetChange { get; set; }                  //เงินคงเหลือ - เงินต้นรวม
         //รายจ่ายคงค้าง
         public decimal PendingCost { get; set; }                 // รายจ่ายคงค้าง
+        public decimal TotalOwnerCost { get; set; }               // ต้นทุนเจ้าของรวม
         public List<DailyStatementDto> DailyStatements { get; set; } = new();
     }
 

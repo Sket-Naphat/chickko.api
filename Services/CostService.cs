@@ -717,6 +717,7 @@ namespace chickko.api.Services
                         && c.CostDate.HasValue
                         && c.CostDate.Value >= costDateFrom
                         && c.CostDate.Value <= costDateTo
+                        && c.CostCategoryID != 5 // ✅ ยกเว้นเงินเงินเจ้าของ (Owner Cost)
                         && c.IsActive == true);
 
                 // ✅ กรองตามประเภทการซื้อ (ถ้าส่งมา > 0)
@@ -781,6 +782,86 @@ namespace chickko.api.Services
                     $" | DateFrom: {costDateFrom}" +
                     $" | DateTo: {costDateTo}" +
                     $" | PurchaseTypeId: {costPurchaseTypeId}");
+
+                return dailyReports;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ เกิดข้อผิดพลาดในการดึงรายงานค่าใช้จ่ายตามประเภทการซื้อ");
+                throw;
+            }
+        }
+
+        public async Task<List<DailyCostReportDto>> GetOwnerCost(DateOnly costDateFrom, DateOnly costDateTo)
+        {
+            try
+            {
+                var query = _context.Cost.AsQueryable()
+                    .Include(c => c.CostCategory)
+                    .Include(c => c.CostStatus)
+                    .Where(c => c.IsPurchase == true // ✅ เฉพาะที่จ่ายแล้ว
+                        && c.CostDate.HasValue
+                        && c.CostDate.Value >= costDateFrom
+                        && c.CostDate.Value <= costDateTo
+                        && c.CostCategoryID == 5 // ✅ เงินเจ้าของ (Owner Cost)
+                        && c.IsActive == true);
+
+                // ✅ Group by วันที่ และ หมวดหมู่
+                var groupedCosts = await query
+                    .GroupBy(c => new
+                    {
+                        Date = c.CostDate,
+                        CategoryId = c.CostCategoryID,
+                        CategoryName = c.CostCategory!.CostCategoryName
+                    })
+                    .Select(g => new
+                    {
+                        Date = g.Key.Date,
+                        CategoryId = g.Key.CategoryId,
+                        CategoryName = g.Key.CategoryName,
+                        TotalAmount = g.Sum(x => x.CostPrice),
+                        Count = g.Count()
+                    })
+                    .ToListAsync();
+
+                // ✅ จัดกลุ่มตามวันที่ แล้ว map เป็น DailyCostReportDto
+                var dailyReports = groupedCosts
+                    .GroupBy(x => x.Date)
+                    .Select(dateGroup => new DailyCostReportDto
+                    {
+                        CostDate = dateGroup.Key,
+                        TotalAmount = (decimal)dateGroup.Sum(x => x.TotalAmount),
+                        TotalRawMaterialCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 1)
+                            .Sum(x => x.TotalAmount),
+                        TotalStaffCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 2)
+                            .Sum(x => x.TotalAmount),
+                        TotalOwnerCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 5)
+                            .Sum(x => x.TotalAmount),
+                        TotalUtilityCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId == 3)
+                            .Sum(x => x.TotalAmount),
+                        TotalOtherCost = (decimal)dateGroup
+                            .Where(x => x.CategoryId != 1 && x.CategoryId != 2 && x.CategoryId != 3 && x.CategoryId != 5)
+                            .Sum(x => x.TotalAmount),
+                        CategoryDetails = dateGroup.Select(cat => new CostCategoryDetailDto
+                        {
+                            CostCategoryID = cat.CategoryId,
+                            CategoryName = cat.CategoryName ?? "ไม่ระบุ",
+                            TotalAmount = (decimal)cat.TotalAmount,
+                            Count = cat.Count
+                        }).ToList()
+                    })
+                    .OrderBy(x => x.CostDate) // ✅ เรียงจากวันเก่าไปใหม่
+                    .ToList();
+
+                _logger.LogInformation(
+                    $"📊 GetCostListbyPurchaseType: Found {dailyReports.Count} daily records" +
+                    $" | DateFrom: {costDateFrom}" +
+                    $" | DateTo: {costDateTo}" +
+                    $" | PurchaseTypeId: 5 (Owner Cost)");
 
                 return dailyReports;
             }
