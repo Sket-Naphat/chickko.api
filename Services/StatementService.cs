@@ -263,6 +263,15 @@ namespace chickko.api.Services
                 decimal previousBalance = runningBalance;
                 decimal previousBalanceBank = runningBalance;
 
+                var ownerCost = await _costService.GetOwnerCost(statementStartDate, effectiveDateTo); // ดึงข้อมูลต้นทุนเจ้าของในช่วงเวลาที่รายงาน
+                var totalOwnerCost = ownerCost.Sum(x => x.TotalAmount); // ยอดรวมต้นทุนเจ้าของในช่วงเวลาที่รายงาน
+                // ✅ หาวันแรกที่เริ่มคิด ownerCost
+                var ownerCostStartDate = ownerCost.Any()
+                    ? ownerCost.Min(x => x.CostDate)
+                    : (DateOnly?)null;
+
+                decimal runningOwnerCost = 0; // ✅ สะสม ownerCost ตั้งแต่วันที่เริ่มต้น
+
                 foreach (var date in allDates)
                 {
                     var dineIn = dineInResult.FirstOrDefault(x => x.SaleDate == date);
@@ -277,6 +286,15 @@ namespace chickko.api.Services
                     var cashCostTotal = cashCost?.TotalAmount ?? 0;
                     var totalCost = bankCostTotal + cashCostTotal;
                     var totalIncome = bankIncome + cashIncome;
+
+                      // ✅ สะสม ownerCost เฉพาะตั้งแต่วันที่เริ่มคิดเป็นต้นไป
+                    var ownerCostForDate = ownerCost
+                        .Where(x => x.CostDate == date)
+                        .Sum(x => x.TotalAmount);
+
+                    if (ownerCostStartDate.HasValue && date >= ownerCostStartDate.Value)
+                        runningOwnerCost += ownerCostForDate;
+
 
                     runningBalanceBank = previousBalanceBank + bankIncome - bankCostTotal;
                     runningBalanceCash += cashIncome;
@@ -296,8 +314,8 @@ namespace chickko.api.Services
                         CashIncome = cashIncome,      // รายรับเงินสด
                         Profit = profit,          // กำไร (วันนี้ - วันก่อน)
                         Difference = difference,       // ส่วนต่าง (รายรับ - ยอดขาย)
-                        Balance = runningBalanceBank + runningBalanceCash,  // ยอดเงินคงเหลือสะสม
-                        BankBalance = runningBalanceBank, // ยอดเงินคงเหลือในบัญชีธนาคาร
+                        Balance = runningBalanceBank + runningBalanceCash - runningOwnerCost,  // ยอดเงินคงเหลือสะสม
+                        BankBalance = runningBalanceBank - runningOwnerCost, // ยอดเงินคงเหลือในบัญชีธนาคาร
                         CashBalance = runningBalanceCash // ยอดเงินคงเหลือเงินสด
                     });
 
@@ -308,8 +326,7 @@ namespace chickko.api.Services
                 //ดึงข้อมูลรายจ่ายคงค้าง (ต้นทุนที่เกิดขึ้นแต่ยังไม่จ่ายจริง) ในช่วงเวลาที่รายงาน
                 var pendingCosts = await GetPendingCostsAsync(statementStartDate, effectiveDateTo);
                 // 6) คำนวณยอดรวมระดับ summary
-                var ownerCost = await _costService.GetOwnerCost(statementStartDate, effectiveDateTo); // ดึงข้อมูลต้นทุนเจ้าของในช่วงเวลาที่รายงาน
-                var totalOwnerCost = ownerCost.Sum(x => x.TotalAmount); // ยอดรวมต้นทุนเจ้าของในช่วงเวลาที่รายงาน
+                
                 var totalBank = dailyStatements.Sum(x => x.BankIncome);
                 var totalCash = dailyStatements.Sum(x => x.CashIncome);
                 var totalCostSum = dailyStatements.Sum(x => x.TotalCost) + totalOwnerCost;
@@ -335,7 +352,7 @@ namespace chickko.api.Services
                     NetProfit = netProfit, // รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง)
                     HiddenCost = hiddenCost, // ต้นทุนแฝง = ยอดขาย - รายรับ
                     TotalSales = totalSales,
-                    BankBalance = (dailyStatements.LastOrDefault()?.BankBalance ?? 0) - totalOwnerCost, // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
+                    BankBalance = (dailyStatements.LastOrDefault()?.BankBalance ?? 0), // ยอดเงินคงเหลือในบัญชีธนาคาร ณ วันสุดท้าย
                     CashBalance = dailyStatements.LastOrDefault()?.CashBalance ?? 0, // ยอดเงินคงเหลือในเงินสด ณ วันสุดท้าย
                     DailyStatements = dailyStatements,
                     TotalCostWithHidden = totalCostWithHidden,

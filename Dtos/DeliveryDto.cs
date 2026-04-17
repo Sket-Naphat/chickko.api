@@ -9,7 +9,8 @@ public class DeliveryDto
     public int? UpdatedBy { get; set; } // 8. ผู้ที่อัปเดต
     public string? SelectedMonth { get; set; } // For filtering by month
     public string? SelectedYear { get; set; } // For filtering by year
-    public int? totalOrders { get; set; } // For total orders in the month
+    public int? TotalOrders { get; set; } // For total orders in the month
+    public decimal? TotalFoodCost { get; set; } // For total Grab price in the month
 }
 
 public class DeliveryOrdersDTO
@@ -28,6 +29,7 @@ public class DeliveryOrdersDTO
     public decimal TotalGrabPrice { get; set; } = 0;
     public string OrderRemark { get; set; } = string.Empty;
     public int ItemQTY { get; set; }
+    public decimal TotalFoodCost { get; set; } = 0;
 
     //list of order details
     public List<OrderDetailDTO> OrderDetails { get; set; } = new();
@@ -50,6 +52,7 @@ public class OrderDetailDTO
     public bool IsDone { get; set; } = false; // Indicates if the order detail is completed
     public bool IsDischarge { get; set; } = false; // Indicates if the order detail is discharged
     public string? Remark { get; set; } // Optional remark for the order detail
+    public decimal TotalFoodCost { get; set; } = 0;
 
 }
 

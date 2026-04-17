@@ -928,159 +928,178 @@ public class OrdersService : IOrdersService
         var query = _context.Deliveries.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(deliveryDto.SelectedMonth) && int.TryParse(deliveryDto.SelectedMonth, out int month))
-        {
             query = query.Where(d => d.SaleDate.Month == month);
-        }
 
         if (!string.IsNullOrWhiteSpace(deliveryDto.SelectedYear) && int.TryParse(deliveryDto.SelectedYear, out int year))
-        {
             query = query.Where(d => d.SaleDate.Year == year);
-        }
 
         var records = await query
             .OrderByDescending(d => d.SaleDate)
-            .Select(d => new DeliveryDto
+            .ToListAsync();
+
+        if (!records.Any())
+            return new List<DeliveryDto>();
+
+        // ✅ ดึงวันที่ทั้งหมดเพื่อใช้ query OrderDetails ครั้งเดียว
+        var saleDates = records.Select(d => d.SaleDate).ToList();
+
+        // ✅ ดึง OrderDetails พร้อม Menu ของ delivery ในช่วงวันที่นั้น
+        var orderDetails = await _context.OrderDetails
+            .Include(od => od.Menu)
+            .Include(od => od.Toppings).ThenInclude(t => t.Menu)
+            .Where(od => od.OrderHeader != null
+                      && od.OrderHeader.OrderTypeId == 3
+                      && od.OrderHeader.OrderDate.HasValue
+                      && saleDates.Contains(od.OrderHeader.OrderDate!.Value))
+            .Select(od => new
             {
-                DeliveryId = d.DeliveryId,
-                SaleDate = d.SaleDate,
-                TotalSales = d.TotalSales,
-                NetSales = d.NetSales,
-                GPPercent = d.GPPercent,
-                GPAmount = d.GPAmount,
-                UpdatedBy = d.UpdatedBy,
-                totalOrders = _context.OrderHeaders.Count(oh => oh.OrderDate == d.SaleDate && oh.OrderTypeId == 3)
+                OrderDate  = od.OrderHeader!.OrderDate!.Value,
+                MenuCost   = od.Menu != null ? od.Menu.Cost : 0,
+                ToppingCost = od.Toppings != null
+                    ? od.Toppings.Sum(t => t.Menu != null ? t.Menu.Cost : 0)
+                    : 0,
+                od.Quantity
             })
             .ToListAsync();
 
-        return records;
+        // ✅ รวม FoodCost แยกตามวันที่
+        var foodCostByDate = orderDetails
+            .GroupBy(od => od.OrderDate)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(od => (od.MenuCost + od.ToppingCost) * od.Quantity)
+            );
+
+        // ✅ นับจำนวน order แยกตามวันที่
+        var orderCountByDate = await _context.OrderHeaders
+            .Where(oh => oh.OrderTypeId == 3
+                      && oh.OrderDate.HasValue
+                      && saleDates.Contains(oh.OrderDate!.Value))
+            .GroupBy(oh => oh.OrderDate!.Value)
+            .Select(g => new { SaleDate = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SaleDate, x => x.Count);
+
+        // ✅ แพ็กข้อมูลใส่ DTO
+        var result = records.Select(d => new DeliveryDto
+        {
+            DeliveryId   = d.DeliveryId,
+            SaleDate     = d.SaleDate,
+            TotalSales   = d.TotalSales,
+            NetSales     = d.NetSales,
+            GPPercent    = d.GPPercent,
+            GPAmount     = d.GPAmount,
+            UpdatedBy    = d.UpdatedBy,
+            TotalOrders  = orderCountByDate.GetValueOrDefault(d.SaleDate, 0),
+            TotalFoodCost = foodCostByDate.GetValueOrDefault(d.SaleDate, 0) // ✅ FoodCost รวมของวันนั้น
+        }).ToList();
+
+        return result;
     }
-    // ...existing code...
+
     public async Task<List<DeliveryOrdersDTO>> GetDeliveryOrdersByDate(DeliveryDto deliveryDto)
     {
         if (deliveryDto.SaleDate == DateOnly.MinValue)
-        {
             return new List<DeliveryOrdersDTO>();
-        }
 
         try
         {
-            // ใช้ SQL Query ที่ optimize แล้ว
-            var query = from oh in _context.OrderHeaders
-                        join ot in _context.Ordertypes on oh.OrderTypeId equals ot.OrderTypeId into otGroup
-                        from ot in otGroup.DefaultIfEmpty()
-                        where oh.OrderDate == deliveryDto.SaleDate
-                              && oh.OrderTypeId == 3 // เฉพาะเดลิเวอรี่
-                        orderby oh.OrderTime descending
-                        select new
-                        {
-                            OrderHeader = oh,
-                            OrderTypeName = ot != null ? ot.OrderTypeName : "ไม่ระบุ"
-                        };
+            // 1) ดึง OrderHeaders เฉพาะเดลิเวอรี่ของวันที่เลือก
+            var orderHeaders = await (
+                from oh in _context.OrderHeaders
+                join ot in _context.Ordertypes on oh.OrderTypeId equals ot.OrderTypeId into otGroup
+                from ot in otGroup.DefaultIfEmpty()
+                where oh.OrderDate == deliveryDto.SaleDate && oh.OrderTypeId == 3
+                orderby oh.OrderTime descending
+                select new { OrderHeader = oh, OrderTypeName = ot != null ? ot.OrderTypeName : "ไม่ระบุ" }
+            ).ToListAsync();
 
-            var orderData = await query.ToListAsync();
+            if (!orderHeaders.Any())
+                return new List<DeliveryOrdersDTO>();
 
-            // ดึง OrderDetails แยกเพื่อ performance
-            var orderIds = orderData.Select(x => x.OrderHeader.OrderId).ToList();
-
+            // 2) ดึง OrderDetails พร้อม Menu และ Toppings
+            var orderIds     = orderHeaders.Select(x => x.OrderHeader.OrderId).ToList();
             var orderDetails = await _context.OrderDetails
                 .Include(od => od.Menu)
-                .Include(od => od.Toppings)
-                    .ThenInclude(t => t.Menu)
+                .Include(od => od.Toppings).ThenInclude(t => t.Menu)
                 .Where(od => orderIds.Contains(od.OrderId))
                 .ToListAsync();
 
-            // Group OrderDetails by OrderId
-            var detailsLookup = orderDetails.GroupBy(od => od.OrderId)
-                                          .ToDictionary(g => g.Key, g => g.ToList());
+            // 3) จัดกลุ่ม OrderDetails ตาม OrderId เพื่อให้ lookup ง่าย
+            var detailsByOrderId = orderDetails
+                .GroupBy(od => od.OrderId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            // สร้าง DTO
-            var deliveryOrders = orderData.Select(item =>
+            // 4) สร้าง DTO แพ็กใส่ตัวแปรก่อน return
+            var result = orderHeaders.Select(item =>
             {
-                var oh = item.OrderHeader;
-                var details = detailsLookup.GetValueOrDefault(oh.OrderId, new List<OrderDetail>());
+                var oh      = item.OrderHeader;
+                var details = detailsByOrderId.GetValueOrDefault(oh.OrderId, new List<OrderDetail>());
 
-                // คำนวณ TotalGrabPrice
-                var totalGrabPrice = details.Sum(od =>
+                // คำนวณ helper function สำหรับ cost และ grab price
+                decimal CalFoodCost(OrderDetail od) =>
+                    ((od.Menu?.Cost ?? 0) + (od.Toppings?.Sum(t => t.Menu?.Cost ?? 0) ?? 0)) * od.Quantity;
+
+                decimal CalGrabPrice(OrderDetail od) =>
+                    ((od.Menu?.GrabPrice ?? 0) + (od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0)) * od.Quantity;
+
+                var orderDetailDtos = details.Select(od => new OrderDetailDTO
                 {
-                    var mainGrabPrice = (od.Menu?.GrabPrice ?? 0) * od.Quantity;
-                    var toppingsGrabPrice = (od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0) * od.Quantity;
-                    return mainGrabPrice + toppingsGrabPrice;
-                });
-
-                var result = new DeliveryOrdersDTO
-                {
-                    OrderId = oh.OrderId,
-                    CustomerName = oh.CustomerName ?? "ไม่ระบุชื่อ",
-                    OrderDate = oh.OrderDate,
-                    OrderTime = oh.OrderTime,
-                    OrderTypeId = oh.OrderTypeId,
-                    OrderTypeName = item.OrderTypeName,
-                    DischargeTime = oh.DischargeTime,
-                    IsDischarge = oh.IsDischarge,
-                    FinishOrderTime = oh.FinishOrderTime,
-                    IsFinishOrder = oh.IsFinishOrder,
-                    TotalPrice = oh.TotalPrice,
-                    TotalGrabPrice = totalGrabPrice,
-                    OrderRemark = oh.OrderRemark ?? string.Empty,
-                    ItemQTY = oh.ItemQTY,
-
-                    OrderDetails = details.Select(od =>
+                    OrderDetailId     = od.OrderDetailId,
+                    OrderId           = od.OrderId,
+                    MenuId            = od.MenuId,
+                    MenuName          = od.Menu?.Name ?? "ไม่ทราบชื่อเมนู",
+                    Quantity          = od.Quantity,
+                    Price             = od.Price,
+                    GrabPrice         = (od.Menu?.GrabPrice ?? 0) + (od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0),
+                    TotalFoodCost     = CalFoodCost(od),
+                    ToppingQTY        = od.ToppingQTY,
+                    MenuIdInFirestore  = od.MenuIdInFirestore,
+                    IsDone            = od.IsDone,
+                    IsDischarge       = od.IsDischarge,
+                    Remark            = od.Remark,
+                    Toppings          = od.Toppings?.Select(t => new OrderDetailToppingDTO
                     {
-                        // คำนวณ GrabPrice รวมของเมนูหลักและ toppings
-                        var menuGrabPrice = od.Menu?.GrabPrice ?? 0;
-                        var toppingsGrabPrice = od.Toppings?.Sum(t => t.Menu?.GrabPrice ?? 0) ?? 0;
-                        var totalGrabPricePerItem = menuGrabPrice + toppingsGrabPrice;
+                        OrderDetailToppingId = t.OrderDetailToppingId,
+                        OrderDetailId        = t.OrderDetailId,
+                        MenuId               = t.MenuId,
+                        toppingNames         = t.Menu?.Name ?? "ไม่ทราบชื่อท็อปปิ้ง",
+                        ToppingPrice         = t.ToppingPrice,
+                        TotalGrabPrice       = t.Menu?.GrabPrice ?? 0
+                    }).ToList() ?? new List<OrderDetailToppingDTO>()
+                }).ToList();
 
-                        return new OrderDetailDTO
-                        {
-                            OrderDetailId = od.OrderDetailId,
-                            OrderId = od.OrderId,
-                            MenuId = od.MenuId,
-                            MenuName = od.Menu?.Name ?? "ไม่ทราบชื่อเมนู",
-                            Quantity = od.Quantity,
-                            Price = od.Price,
-
-                            // GrabPrice รวม = เมนูหลัก + ท็อปปิ้งทั้งหมด (ต่อ 1 ชิ้น)
-                            GrabPrice = totalGrabPricePerItem,
-
-                            ToppingQTY = od.ToppingQTY,
-                            MenuIdInFirestore = od.MenuIdInFirestore,
-                            IsDone = od.IsDone,
-                            IsDischarge = od.IsDischarge,
-                            Remark = od.Remark,
-
-                            Toppings = od.Toppings?.Select(t => new OrderDetailToppingDTO
-                            {
-                                OrderDetailToppingId = t.OrderDetailToppingId,
-                                OrderDetailId = t.OrderDetailId,
-                                MenuId = t.MenuId,
-                                toppingNames = t.Menu?.Name ?? "ไม่ทราบชื่อท็อปปิ้ง",
-                                ToppingPrice = t.ToppingPrice,
-                                TotalGrabPrice = t.Menu?.GrabPrice ?? 0
-                            }).ToList() ?? new List<OrderDetailToppingDTO>()
-                        };
-                    }).ToList()
+                return new DeliveryOrdersDTO
+                {
+                    OrderId         = oh.OrderId,
+                    CustomerName    = oh.CustomerName ?? "ไม่ระบุชื่อ",
+                    OrderDate       = oh.OrderDate,
+                    OrderTime       = oh.OrderTime,
+                    OrderTypeId     = oh.OrderTypeId,
+                    OrderTypeName   = item.OrderTypeName,
+                    DischargeTime   = oh.DischargeTime,
+                    IsDischarge     = oh.IsDischarge,
+                    FinishOrderTime = oh.FinishOrderTime,
+                    IsFinishOrder   = oh.IsFinishOrder,
+                    TotalPrice      = oh.TotalPrice,
+                    TotalGrabPrice  = details.Sum(od => CalGrabPrice(od)),
+                    TotalFoodCost   = details.Sum(od => CalFoodCost(od)),
+                    OrderRemark     = oh.OrderRemark ?? string.Empty,
+                    ItemQTY         = oh.ItemQTY,
+                    OrderDetails    = orderDetailDtos
                 };
-
-
-                return result;
             }).ToList();
 
-            _logger.LogInformation($"📋 Retrieved {deliveryOrders.Count} delivery orders for {deliveryDto.SaleDate}");
+            _logger.LogInformation(
+                "📋 Retrieved {Count} delivery orders for {Date}",
+                result.Count, deliveryDto.SaleDate);
 
-            // Log สรุปยอดขาย
-            // var totalOrders = deliveryOrders.Count;
-            // var totalRevenue = deliveryOrders.Sum(x => x.TotalSales);
-            // var totalGrabRevenue = deliveryOrders.Sum(x => x.TotalGrabPrice);
-
-            //_logger.LogInformation($"💰 Summary for {deliveryDto.SaleDate}: {totalOrders} orders, Revenue: ฿{totalRevenue:N2}, Grab Revenue: ฿{totalGrabRevenue:N2}");
-
-            return deliveryOrders;
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"❌ Error getting delivery orders for date {deliveryDto.SaleDate}");
-            throw new InvalidOperationException($"ไม่สามารถดึงข้อมูลคำสั่งซื้อสำหรับวันที่ {deliveryDto.SaleDate} ได้", ex);
+            _logger.LogError(ex, "❌ Error getting delivery orders for date {Date}", deliveryDto.SaleDate);
+            throw new InvalidOperationException(
+                $"ไม่สามารถดึงข้อมูลคำสั่งซื้อสำหรับวันที่ {deliveryDto.SaleDate} ได้", ex);
         }
     }
     public async Task<List<IncomeOrdersDTO>> GetIncomeOrdersByDate(IncomeDto incomeDto)
