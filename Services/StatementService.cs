@@ -247,6 +247,7 @@ namespace chickko.api.Services
                 var deliveryResult = await _ordersService.GetDailyDeliverySalesReport(saleDateDto);
                 var dailyCostWithBankTransfer = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 1);
                 var dailyCostWithCashPay = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 2);
+                var dailyCostWithCashPayOut = await _costService.GetCostListbyPurchaseType(statementStartDate, effectiveDateTo, 3);
                 var incomeWithBankTransfer = await GetIncomeAsync(statementStartDate, effectiveDateTo, 1);
                 var incomeWithCashPay = await GetIncomeAsync(statementStartDate, effectiveDateTo, 2);
 
@@ -278,13 +279,15 @@ namespace chickko.api.Services
                     var delivery = deliveryResult.FirstOrDefault(x => x.SaleDate == date);
                     var bankCost = dailyCostWithBankTransfer.FirstOrDefault(x => x.CostDate == date);
                     var cashCost = dailyCostWithCashPay.FirstOrDefault(x => x.CostDate == date);
+                    var cashPayOut  = dailyCostWithCashPayOut.FirstOrDefault(x => x.CostDate == date); // ✅ ดึง cashPayOut ของวันนั้น
                     var bankIncome = incomeWithBankTransfer.Where(x => x.IncomeDate == date).Sum(x => x.IncomeValue);
                     var cashIncome = incomeWithCashPay.Where(x => x.IncomeDate == date).Sum(x => x.IncomeValue);
 
                     var sales = (dineIn?.TotalAmount ?? 0) + (delivery?.TotalAmount ?? 0);
                     var bankCostTotal = bankCost?.TotalAmount ?? 0;
                     var cashCostTotal = cashCost?.TotalAmount ?? 0;
-                    var totalCost = bankCostTotal + cashCostTotal;
+                    var cashPayOutTotal = cashPayOut?.TotalAmount ?? 0;
+                    var totalCost = bankCostTotal + cashCostTotal + cashPayOutTotal; // ✅ รวมต้นทุนจ่ายโอน, ต้นทุนจ่ายเงินสด และต้นทุนจ่ายเงินสดออกไปเข้าด้วยกันเพื่อให้เห็นภาพรวมของต้นทุนที่เกิดขึ้นในแต่ละวันได้ชัดเจนขึ้น เพราะบางวันอาจจะมีต้นทุนที่เกิดขึ้นในรูปแบบของการจ่ายเงินสดออกไปซึ่งไม่สะท้อนผ่านยอดเงินคงเหลือในบัญชีธนาคาร แต่ก็เป็นต้นทุนที่เกิดขึ้นจริงของธุรกิจ
                     var totalIncome = bankIncome + cashIncome;
 
                       // ✅ สะสม ownerCost เฉพาะตั้งแต่วันที่เริ่มคิดเป็นต้นไป
@@ -297,7 +300,7 @@ namespace chickko.api.Services
 
 
                     runningBalanceBank = previousBalanceBank + bankIncome - bankCostTotal;
-                    runningBalanceCash += cashIncome;
+                    runningBalanceCash = runningBalanceCash + cashIncome - cashPayOutTotal; // ✅ คำนวณยอดเงินคงเหลือเงินสดโดยเพิ่มรายรับเงินสดและหักต้นทุนจ่ายเงินสดออกไป ซึ่งจะช่วยให้เห็นภาพรวมของยอดเงินคงเหลือในส่วนของเงินสดได้ชัดเจนขึ้น เพราะรายรับและต้นทุนที่เกี่ยวข้องกับเงินสดจะถูกคำนวณแยกออกมาต่างหากจากยอดเงินคงเหลือในบัญชีธนาคารที่สะท้อนเฉพาะรายการที่เกี่ยวข้องกับการโอนเท่านั้น
                     runningBalance = runningBalanceBank + runningBalanceCash;
                     var profit = runningBalance - previousBalance - cashCostTotal; // กำไรของวันนี้ = ยอดเงินคงเหลือวันนี้ - ยอดเงินคงเหลือเมื่อวาน - ต้นทุนจ่ายเงินสดของวันนี้ ซึ่งจะช่วยให้เห็นภาพรวมของกำไรที่แท้จริงของแต่ละวันได้ชัดเจนขึ้น เพราะต้นทุนจ่ายเงินสดจะถูกหักออกจากกำไรทันทีในวันนั้นๆ ในขณะที่ต้นทุนจ่ายโอนจะสะท้อนผ่านยอดเงินคงเหลือในบัญชีธนาคารที่อัปเดตทุกวัน
                     var difference = (totalIncome + cashCostTotal) - sales; // ส่วนต่างระหว่างรายรับกับยอดขาย ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
@@ -308,7 +311,7 @@ namespace chickko.api.Services
                         Sales = sales,           // ยอดขายรวม (dineIn + delivery)
                         TotalCost = totalCost,       // ต้นทุนรวม (โอน + เงินสด)
                         BankCost = bankCostTotal,    // ต้นทุนจ่ายโอน
-                        CashCost = cashCostTotal,   // ต้นทุนจ่ายเงินสด
+                        CashCost = cashCostTotal + cashPayOutTotal,   // ต้นทุนจ่ายเงินสด
                         TotalIncome = totalIncome,     // รายรับรวม (โอน + เงินสด)
                         BankIncome = bankIncome,      // รายรับโอนเข้าธนาคาร
                         CashIncome = cashIncome,      // รายรับเงินสด
@@ -332,9 +335,10 @@ namespace chickko.api.Services
                 var totalCostSum = dailyStatements.Sum(x => x.TotalCost) + totalOwnerCost;
                 var totalBankCost = dailyStatements.Sum(x => x.BankCost);
                 var totalCashCost = dailyStatements.Sum(x => x.CashCost);
+                var totalCastPayOut = dailyCostWithCashPayOut.Sum(x => x.TotalAmount);
                 var totalIncomeSum = dailyStatements.Sum(x => x.TotalIncome);
                 var totalSales = dailyStatements.Sum(x => x.Sales);
-                var hiddenCost = totalIncomeSum + totalCashCost - totalSales;// ต้นทุนแฝง = รายรับรวม - ยอดขายรวม ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
+                var hiddenCost = totalIncomeSum + (totalCashCost - totalCastPayOut) - totalSales;// ต้นทุนแฝง = รายรับรวม - ยอดขายรวม ซึ่งถ้าเป็นบวกแสดงว่ามีรายรับที่ไม่ได้มาจากยอดขาย (เช่น รายรับจากการคืนเงิน, รายรับจากแหล่งอื่น) แต่ถ้าเป็นลบแสดงว่ามียอดขายที่ไม่ได้ถูกบันทึกเป็นรายรับ (เช่น ขายแล้วแต่ยังไม่บันทึกรายรับ หรือมีการบันทึกรายรับน้อยกว่ายอดขายจริง) ซึ่งจะช่วยให้เห็นภาพรวมของธุรกิจได้ชัดเจนขึ้นว่า มีส่วนต่างระหว่างยอดขายกับรายรับมากน้อยแค่ไหน และอาจจะต้องตรวจสอบเพิ่มเติมในกรณีที่มีต้นทุนแฝงสูง
                 var totalCostWithHidden = totalCostSum - hiddenCost; // ต้นทุนรวมถ้าคิดต้นทุนแฝงด้วย = ต้นทุนรวม + (ยอดขายรวม - รายรับรวม) ซึ่งจะสะท้อนภาพที่รัดกุมมากขึ้นว่า ถ้ารวมต้นทุนแฝงแล้ว ธุรกิจยังมีกำไรหรือขาดทุน
                 // var netProfit = totalIncomeSum - totalCostWithHidden;
                 var netProfit = totalIncomeSum - totalCostSum; // กำไรสุทธิ = รายรับรวม - ต้นทุนรวม (ไม่รวมต้นทุนแฝง) เพราะต้นทุนแฝงคือส่วนต่างระหว่างยอดขายกับรายรับ ซึ่งถ้านำมาคิดเป็นต้นทุนจะทำให้กำไรสุทธิลดลงมากเกินไปและไม่สะท้อนภาพจริงของธุรกิจที่อาจมีต้นทุนแฝงสูงแต่ยังมีกำไรได้ถ้ารายรับสูงกว่าต้นทุนจริงๆ
