@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using chickko.api.Services;
 using chickko.api.Models;
+using chickko.api.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using chickko.api.Interface;
 
@@ -67,6 +68,34 @@ namespace chickko.api.Controllers
                 });
             }
         }
+        [HttpGet("GetBankList")]
+        public async Task<IActionResult> GetBankList()
+        {
+            try
+            {
+                var banks = await _authService.GetBankList();
+                return Ok(banks);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("UpdateEmployee")]
+        public async Task<IActionResult> UpdateEmployee([FromBody] UpdateEmployeeDto dto)
+        {
+            try
+            {
+                await _authService.UpdateEmployee(dto);
+                return Ok(new { success = true, message = "แก้ไขข้อมูลพนักงานสำเร็จ" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpGet("GetAllEmployee")]
         public async Task<IActionResult> GetAllEmployee()
         {

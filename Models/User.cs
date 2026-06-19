@@ -17,6 +17,10 @@ namespace chickko.api.Models
         public string Contact { get; set; } = "";
         public int UserPermistionID { get; set; } = 3;
         public UserPermistion? UserPermistion { get; set; } = null;
+        public double WageCost { get; set; } = 50;
+        public int? BankID { get; set; } = null;
+        public baseBank? BaseBank { get; set; } = null;
+        public string? BankAccount { get; set; } = null;
     }
     public class UserPermistion
     {
@@ -47,6 +51,12 @@ namespace chickko.api.Models
         public string? Site { get; set; } // เพิ่ม: HKT หรือ BKK (ถ้ามี)
         public string? Contact { get; set; } // เพิ่ม: ข้อมูลติดต่อ (ถ้ามี)
         public int? UserPermistionID { get; set; } // เพิ่ม: สิทธิ์ผู้ใช้ (ถ้ามี)
+    }
+    public class baseBank
+    {
+        [Key]
+        public int BankID { get; set; }
+        public string BankName { get; set; } = null!;
     }
 
 }

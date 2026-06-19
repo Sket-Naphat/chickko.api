@@ -1,4 +1,5 @@
 using chickko.api.Data;
+using chickko.api.Dtos;
 using chickko.api.Models;
 using chickko.api.Interface;
 using Microsoft.IdentityModel.Tokens;
@@ -165,15 +166,72 @@ namespace chickko.api.Services
         public string GenerateJwtToken(User user) { ... }
         public string GenerateJwtToken(User user, string site) { ... }
         */
-        public async Task<List<User>> GetAllEmployee()
+        public async Task<bool> UpdateEmployee(UpdateEmployeeDto dto)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == dto.UserId)
+                    ?? throw new Exception("ไม่พบข้อมูลพนักงาน");
+
+                user.Name = dto.Name;
+                user.Username = dto.Username;
+                user.Contact = dto.Contact;
+                user.Site = dto.Site;
+                user.BankID = dto.BankID;
+                user.BankAccount = dto.BankAccount;
+                user.WageCost = dto.WageCost;
+                user.UserPermistionID = dto.UserPermistionID;
+                user.IsActive = dto.IsActive;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to update employee: " + ex.Message);
+            }
+        }
+
+        public async Task<List<baseBank>> GetBankList()
+        {
+            try
+            {
+                return await _context.BaseBanks.OrderBy(b => b.BankID).ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Failed to retrieve bank list: " + ex.Message);
+            }
+        }
+
+        public async Task<List<EmployeeDto>> GetAllEmployee()
         {
             try
             {
                 var employees = await _context.Users
-                    .Where(u => u.UserPermistionID != 1 && u.IsActive == true)
+                    .Include(u => u.UserPermistion)
+                    .Include(u => u.BaseBank)
+                    .OrderBy(u => u.UserPermistionID)
+                    .ThenBy(u => u.Name)
                     .ToListAsync();
-                    employees.ForEach(e => e.Password = string.Empty); // ลบ password ก่อนส่งออก
-                return employees;
+
+                return employees.Select(u => new EmployeeDto
+                {
+                    UserId = u.UserId,
+                    Username = u.Username,
+                    Name = u.Name,
+                    Contact = u.Contact,
+                    IsActive = u.IsActive,
+                    Site = u.Site,
+                    StartWorkDate = u.StartWorkDate,
+                    UserPermistionID = u.UserPermistionID,
+                    UserPermistionName = u.UserPermistion?.UserPermistionName ?? "",
+                    WageCost = u.WageCost,
+                    BankID = u.BankID,
+                    BankName = u.BaseBank?.BankName,
+                    BankAccount = u.BankAccount,
+                }).ToList();
             }
             catch (Exception ex)
             {

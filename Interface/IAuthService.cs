@@ -1,3 +1,4 @@
+using chickko.api.Dtos;
 using chickko.api.Models;
 
 namespace chickko.api.Interface
@@ -7,7 +8,9 @@ namespace chickko.api.Interface
         // ฟังก์ชันหลักที่ใช้จริง (รับ username/password ใช้ site จาก Header ผ่าน SiteService)
         Task<object> LoginAsync(string username, string password);
         Task<bool> Register(RegisterRequest request);
-        Task<List<User>> GetAllEmployee();
+        Task<List<EmployeeDto>> GetAllEmployee();
+        Task<List<baseBank>> GetBankList();
+        Task<bool> UpdateEmployee(UpdateEmployeeDto dto);
 
         // ===== ฟังก์ชันเดิม (ไม่ใช้แล้ว) คอมเมนต์เก็บไว้เผื่อย้อนกลับ =====
         // User? Login(string username, string password);
