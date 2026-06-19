@@ -26,6 +26,8 @@ namespace chickko.api.Dtos
         public string? PurchaseDate { get; set; }
         public int? CreatedBy { get; set; }
         public double? WageCostNoPurchase { get; set; } = 0;
+        public string? BankAccount { get; set; } // เลขบัญชีธนาคารของพนักงาน
+        public string? BankName { get; set; } // ชื่อธนาคารของพนักงาน
     }
 
     public class WorktimeSummaryDto

@@ -47,6 +47,7 @@ namespace chickko.api.Data
         public DbSet<EventRollingReward> EventRollingRewards { get; set; } = null!;
         public DbSet<EventRollingResult> EventRollingResults { get; set; } = null!;
         public DbSet<CostPurchaseType> CostPurchaseType { get; set; } = null!;
+        public DbSet<baseBank> BaseBanks { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -120,6 +121,13 @@ namespace chickko.api.Data
                 entity.HasNoKey();          // เนื่องจาก table นี้ไม่มี Primary Key
                 entity.ToView(null);        // เพื่อไม่ให้ EF คิดว่าเป็น View จริง
             });
+
+            // User → baseBank (nullable N:1)
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.BaseBank)
+                .WithMany()
+                .HasForeignKey(u => u.BankID)
+                .OnDelete(DeleteBehavior.SetNull);
         }
 
     }

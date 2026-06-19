@@ -111,13 +111,16 @@ namespace chickko.api.Services
                         var totalHours = Math.Round((clockOut - clockIn).TotalHours, 2);
                         _Worktime.TotalWorktime = totalHours;
                         double CostWage = 0;
-                        if (_Employee.UserPermistion.UserPermistionID == 1) //owner 
+                        // ใช้ค่าแรงของพนักงานแต่ละคน (User.WageCost) ถ้ากำหนดไว้ (> 0)
+                        // ถ้าไม่ได้กำหนด ให้ใช้ค่าแรงตาม Permission แทน
+                        var rate = _Employee.WageCost > 0 ? _Employee.WageCost : _Employee.UserPermistion.WageCost;
+                        if (_Employee.UserPermistion.UserPermistionID == 1) //owner — ค่าแรงคงที่รายวัน ไม่คิดต่อชั่วโมง
                         {
-                            CostWage = _Employee.UserPermistion.WageCost;
+                            CostWage = rate;
                         }
                         else
                         {
-                            CostWage = totalHours * _Employee.UserPermistion.WageCost; //employee
+                            CostWage = totalHours * rate; //employee — ค่าแรงรายชั่วโมง × ชั่วโมงทำงานจริง
                         }
                         // _Worktime.WageCost = CostWage;
                         _Worktime.WageCost = Math.Ceiling(CostWage);
@@ -260,7 +263,7 @@ namespace chickko.api.Services
                     endDate = new DateOnly(year, month, DateTime.DaysInMonth(year, month));
 
                 var worktimes = await _context.Worktime
-                    .Include(w => w.Employee)
+                    .Include(w => w.Employee).ThenInclude(e => e.BaseBank)
                     .Where(w => w.WorkDate >= startDate
                             && w.WorkDate <= endDate
                             && w.Employee != null
@@ -281,6 +284,8 @@ namespace chickko.api.Services
                         TotalWageCost = g.Sum(x => x.WageCost),
                         // ✅ เพิ่ม WageCostNoPurchase - เฉพาะรายการที่ IsPurchase = false
                         TotalWageCostNoPurchase = g.Where(x => x.IsPurchase == false).Sum(x => x.WageCost),
+                        BankAccount = g.First().Employee?.BankAccount,
+                        BankName = g.First().Employee?.BaseBank?.BankName,
 
                         Details = g.Select(w => new WorktimeDto
                         {
@@ -310,8 +315,9 @@ namespace chickko.api.Services
                     TotalWorktime = s.TotalWorktime,
                     Price = s.TotalPrice,
                     WageCost = s.TotalWageCost,
-                    // ✅ เพิ่ม WageCostNoPurchase ในผลลัพธ์
                     WageCostNoPurchase = s.TotalWageCostNoPurchase,
+                    BankAccount = s.BankAccount,
+                    BankName = s.BankName,
                 }).ToList();
 
                 return result;
@@ -395,8 +401,7 @@ namespace chickko.api.Services
                     EmployeeName = s.EmployeeName,
                     TotalWorktime = s.TotalWorktime,
                     WageCost = s.TotalWageCost,
-                    Worktimes = s.Details.ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
-                    // Worktimes = s.Details.Where(d => d.IsPurchase == true).ToList() // เฉพาะรายการที่ยังไม่ถูกบันทึกเป็นค่าใช้จ่าย
+                    Worktimes = s.Details.ToList()
                 }).FirstOrDefault();
 
                 return result ?? new WorktimeSummaryDto();
@@ -444,15 +449,20 @@ namespace chickko.api.Services
 
                             if (_Employee != null && _Employee.UserPermistion != null && _Employee.UserPermistion.UserPermistionID == 1) //owner
                             {
-                                CostWage = _Employee.UserPermistion.WageCost;
+                                // owner — ค่าแรงคงที่รายวัน ไม่คิดต่อชั่วโมง
+                                // ใช้ User.WageCost ถ้ากำหนดไว้ ไม่งั้นใช้จาก Permission
+                                CostWage = _Employee.WageCost > 0 ? _Employee.WageCost : _Employee.UserPermistion.WageCost;
                             }
                             else if (_Employee != null && _Employee.UserPermistion != null)
                             {
-                                CostWage = totalHours * _Employee.UserPermistion.WageCost; //employee
+                                // employee — ค่าแรงรายชั่วโมง × ชั่วโมงทำงานจริง
+                                // ใช้ User.WageCost ถ้ากำหนดไว้ ไม่งั้นใช้จาก Permission
+                                var rate = _Employee.WageCost > 0 ? _Employee.WageCost : _Employee.UserPermistion.WageCost;
+                                CostWage = totalHours * rate;
                             }
                             else
                             {
-                                CostWage = 0; // or handle the case where UserPermistion is null
+                                CostWage = 0; // กรณี UserPermistion เป็น null
                             }
                             // _Worktime.WageCost = CostWage;
                             _Worktime.WageCost = Math.Ceiling(CostWage);
@@ -519,15 +529,20 @@ namespace chickko.api.Services
 
                             if (_Employee != null && _Employee.UserPermistion != null && _Employee.UserPermistion.UserPermistionID == 1) //owner
                             {
-                                CostWage = _Employee.UserPermistion.WageCost;
+                                // owner — ค่าแรงคงที่รายวัน ไม่คิดต่อชั่วโมง
+                                // ใช้ User.WageCost ถ้ากำหนดไว้ ไม่งั้นใช้จาก Permission
+                                CostWage = _Employee.WageCost > 0 ? _Employee.WageCost : _Employee.UserPermistion.WageCost;
                             }
                             else if (_Employee != null && _Employee.UserPermistion != null)
                             {
-                                CostWage = totalHours * _Employee.UserPermistion.WageCost; //employee
+                                // employee — ค่าแรงรายชั่วโมง × ชั่วโมงทำงานจริง
+                                // ใช้ User.WageCost ถ้ากำหนดไว้ ไม่งั้นใช้จาก Permission
+                                var rate = _Employee.WageCost > 0 ? _Employee.WageCost : _Employee.UserPermistion.WageCost;
+                                CostWage = totalHours * rate;
                             }
                             else
                             {
-                                CostWage = 0; // or handle the case where UserPermistion is null
+                                CostWage = 0; // กรณี UserPermistion เป็น null
                             }
                             // _Worktime.WageCost = CostWage;
                             _Worktime.WageCost = Math.Ceiling(CostWage);
@@ -609,14 +624,16 @@ namespace chickko.api.Services
 
                     totalWorktime = Math.Round((clockOut - clockIn).TotalHours, 2);
 
-                    // คำนวณค่าแรงตาม UserPermission
-                    // - Owner (UserPermistionID == 1): ค่าแรงคงที่รายวัน
-                    // - Employee: ค่าแรงรายชั่วโมง * จำนวนชั่วโมง
+                    // คำนวณค่าแรง
+                    // - Owner (UserPermistionID == 1): ค่าแรงคงที่รายวัน ไม่คิดต่อชั่วโมง
+                    // - Employee: ค่าแรงรายชั่วโมง × ชั่วโมงทำงานจริง
+                    // ใช้ User.WageCost ถ้ากำหนดไว้ (> 0) ไม่งั้น fallback ไปใช้ UserPermistion.WageCost
                     if (employee.UserPermistion != null)
                     {
+                        var rate = employee.WageCost > 0 ? employee.WageCost : employee.UserPermistion.WageCost;
                         wageCost = employee.UserPermistion.UserPermistionID == 1
-                            ? employee.UserPermistion.WageCost
-                            : totalWorktime * employee.UserPermistion.WageCost;
+                            ? rate                      // owner — flat rate รายวัน
+                            : totalWorktime * rate;     // employee — รายชั่วโมง
 
                         wageCost = Math.Ceiling(wageCost);
                     }
