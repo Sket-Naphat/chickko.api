@@ -29,8 +29,6 @@ namespace chickko.api.Data
         public DbSet<Cost> Cost { get; set; } = null!;
         public DbSet<CostCategory> CostCategory { get; set; } = null!;
         public DbSet<Worktime> Worktime { get; set; } = null!;
-        public DbSet<Stock> Stock { get; set; } = null!;
-        public DbSet<StockLog> StockLog { get; set; } = null!;
         public DbSet<Supplier> Supplier { get; set; } = null!;
         public DbSet<StockCategory> StockCategory { get; set; } = null!;
         public DbSet<StockUnitType> StockUnitType { get; set; } = null!;
@@ -52,6 +50,11 @@ namespace chickko.api.Data
         {
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ChickkoContext).Assembly);
+
+            // ระบุชื่อ table ตรงๆ กัน EF Core เดาผิดจากชื่อ DbSet property (table จริงในฐานข้อมูลเป็นเอกพจน์)
+            modelBuilder.Entity<Stock>().ToTable("Stock");
+            modelBuilder.Entity<StockLog>().ToTable("StockLog");
+
             // OrderHeader ↔ OrderDetail (1:N)
             modelBuilder.Entity<OrderHeader>()
                 .HasMany<OrderDetail>() // ใช้ HasMany เพื่อระบุความสัมพันธ์ 1:N

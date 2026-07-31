@@ -177,7 +177,7 @@ namespace chickko.api.Services
                 if (_cost != null && _cost.Count > 0)
                 {
                     //ถ้ามีที่ยังไม่จ่ายเงินทีให้ทำการ get stock และราคา
-                    var _stock = await _context.Stock
+                    var _stock = await _context.Stocks
                                 .Include(s => s.StockCategory)
                                 .Include(s => s.StockUnitType)
                                 .Include(s => s.StockLocation)
@@ -539,7 +539,7 @@ namespace chickko.api.Services
             try
             {
                 // ตรวจสอบว่ามีการเชื่อมโยงกับ StockLog หรือไม่
-                var linkedStockLogs = _context.StockLog.Any(w => w.CostId == costId);
+                var linkedStockLogs = _context.StockLogs.Any(w => w.CostId == costId);
 
                 if (linkedStockLogs)
                 {

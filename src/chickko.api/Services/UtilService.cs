@@ -142,7 +142,7 @@ namespace chickko.api.Services
                     // 💻 โหมด Local (อ่านไฟล์ในโปรเจกต์)
                     // -----------------------------
                     var fileName = site == "BKK" ? "credentials_bkk.json" : "credentials.json";
-                    var path = Path.Combine(Directory.GetCurrentDirectory(), "firebase", fileName);
+                    var path = Path.Combine(Directory.GetCurrentDirectory(), "Firebase", fileName);
                     if (!File.Exists(path))
                         throw new FileNotFoundException($"Credentials file not found: {path}");
 

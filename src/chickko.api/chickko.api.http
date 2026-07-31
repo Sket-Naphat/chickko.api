@@ -1,0 +1,6 @@
+@chickko.api_HostAddress = http://localhost:5036
+
+GET {{chickko.api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
